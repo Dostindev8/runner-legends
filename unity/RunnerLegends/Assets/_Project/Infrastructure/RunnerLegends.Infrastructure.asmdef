@@ -1,0 +1,12 @@
+{
+  "name": "RunnerLegends.Infrastructure",
+  "rootNamespace": "RunnerLegends.Infrastructure",
+  "references": [
+    "RunnerLegends.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true,
+  "noEngineReferences": false
+}

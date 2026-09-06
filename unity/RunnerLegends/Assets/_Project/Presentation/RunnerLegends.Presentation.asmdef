@@ -1,0 +1,18 @@
+{
+  "name": "RunnerLegends.Presentation",
+  "rootNamespace": "RunnerLegends.Presentation",
+  "references": [
+    "RunnerLegends.Core",
+    "RunnerLegends.Gameplay",
+    "RunnerLegends.Infrastructure",
+    "Unity.InputSystem",
+    "Unity.RenderPipelines.Universal.Runtime",
+    "Unity.TextMeshPro",
+    "UnityEngine.UI"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true,
+  "noEngineReferences": false
+}

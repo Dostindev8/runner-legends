@@ -1,0 +1,19 @@
+{
+  "_comment": "Single source of truth for physics constants shared by the Unity client and the tournament anti-cheat. Bump 'version' whenever any value changes; both sides validate that their configVersion matches on every replay submission (GDD 3.5 / prompt §6). A build step should generate PhysicsConfig.cs (Unity) and physics-config.ts (server) from this file.",
+  "version": "1.0.0",
+  "characters": {
+    "kori_voltz":  { "baseMaxSpeed": 11.0 },
+    "shino_kage":  { "baseMaxSpeed": 14.0 },
+    "mc_rumor":    { "baseMaxSpeed": 11.0 },
+    "leo_dorado":  { "baseMaxSpeed": 12.5 },
+    "don_cash":    { "baseMaxSpeed": 9.5 },
+    "neon_groove": { "baseMaxSpeed": 14.0 }
+  },
+  "caps": {
+    "speedUpgradeMaxMult": 1.25,
+    "superMobilityMaxMult": 1.5,
+    "speedMargin": 1.05,
+    "coinMargin": 1.05,
+    "maxInputsPerSecond": 20
+  }
+}

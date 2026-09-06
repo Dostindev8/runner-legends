@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Builds
+dist/
+**/dist/
+*.tsbuildinfo
+server/dist/
+tournament-service/dist/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+**/.env
+!**/.env.example
+
+# Logs / coverage
+*.log
+npm-debug.log*
+coverage/
+.nyc_output/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Unity generated (keep Assets/Packages/ProjectSettings)
+unity/RunnerLegends/Library/
+unity/RunnerLegends/Temp/
+unity/RunnerLegends/Obj/
+unity/RunnerLegends/Build/
+unity/RunnerLegends/Builds/
+unity/RunnerLegends/Logs/
+unity/RunnerLegends/UserSettings/
+unity/RunnerLegends/MemoryCaptures/
+unity/RunnerLegends/*.csproj
+unity/RunnerLegends/*.sln
+unity/RunnerLegends/*.userprefs
+unity/RunnerLegends/obj/
+
+# Vercel
+.vercel/

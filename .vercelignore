@@ -1,0 +1,12 @@
+server
+tournament-service
+unity
+node_modules
+**/node_modules
+.github
+.git
+*.md
+!README.md
+Docs
+.env
+.env.*
