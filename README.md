@@ -8,10 +8,13 @@ El GDD define el motor de producción (Unity 6 + URP 2D, NestJS, etc.); este rep
 un **vertical slice funcional en navegador** que prueba el *game feel* real del GDD, con la
 misma arquitectura por capas, listo para abrir y jugar sin build ni servidor.
 
-## Cómo jugar
+## Demo en producción (Vercel)
 
-Opción A — doble clic en `index.html`.
-Opción B (recomendada, evita restricciones de `file://`):
+**Jugar ahora:** [https://runner-legends.vercel.app/](https://runner-legends.vercel.app/)
+
+Inspect: [Vercel dashboard](https://vercel.com/dostindevs-projects/runner-legends)
+
+## Cómo jugar (local)
 
 ```cmd
 python -m http.server 8188
