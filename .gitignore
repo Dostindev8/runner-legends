@@ -46,3 +46,4 @@ unity/RunnerLegends/obj/
 
 # Vercel
 .vercel/
+.vercel
