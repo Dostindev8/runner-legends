@@ -1,12 +1,13 @@
-# Runner Legends — Vertical Slice (Distrito Neón / Kori Voltz)
+# Runner Legends — Distrito Neón (Web Slice v3.1)
 
-> IP 100% original de **Logic Code Spot** (GDD v2.0, sección 13.1). Ningún personaje,
-> marca o persona real es usado ni imitado.
+> IP 100% original de **Logic Code Spot**. Ningún personaje, marca o persona real es usado ni imitado.
 
-Traducción **ejecutable y jugable hoy** de la **FASE 1 (Core Loop)** del GDD v2.0.
-El GDD define el motor de producción (Unity 6 + URP 2D, NestJS, etc.); este repo entrega
-un **vertical slice funcional en navegador** que prueba el *game feel* real del GDD, con la
-misma arquitectura por capas, listo para abrir y jugar sin build ni servidor.
+Vertical slice **jugable en navegador** + scaffold Unity/Nest. Mega Directiva v2.0 en el web:
+**WorldConfig** (10 mundos) · **PortalOutcomeResolver** (destino/clima/regla variables) ·
+**WorldTransitionManager** · reglas dimensionales que afectan física · clima · HUD/menú premium.
+
+**No es** un build Unity URP fotoreal: las refs de lluvia/portal son dirección de arte;
+el canvas prioriza composición, iluminación y sistemas reales sobre resolución de textura.
 
 ## Demo en producción (Vercel)
 
