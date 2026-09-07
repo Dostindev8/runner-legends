@@ -950,7 +950,7 @@
         weatherFX.draw(ctx, view);
       } else {
         drawGround(ctx, view); particles.draw(ctx);
-        if (mgr.state === 'MENU') drawKori(ctx, view, true);
+        // Menu/intro: city only — Kori in UI card; avoids silhouette bleeding through glass panels
         weatherFX.draw(ctx, view);
       }
       if (mgr.state === 'LOGO') drawLogo(ctx, view);
