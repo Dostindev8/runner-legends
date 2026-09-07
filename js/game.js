@@ -150,10 +150,19 @@
     constructor(canvas) {
       this.c = canvas; this.ctx = canvas.getContext('2d');
       this.dpr = 1; this.w = 0; this.h = CFG.logicalH; this.scale = 1; this.lookAhead = 0;
-      window.addEventListener('resize', () => this.resize()); this.resize();
+      const onResize = () => this.resize();
+      window.addEventListener('resize', onResize);
+      window.addEventListener('orientationchange', onResize);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', onResize);
+        window.visualViewport.addEventListener('scroll', onResize);
+      }
+      this.resize();
     }
     resize() {
-      const vw = window.innerWidth, vh = window.innerHeight;
+      const vv = window.visualViewport;
+      const vw = Math.max(1, Math.round((vv && vv.width) || window.innerWidth || document.documentElement.clientWidth));
+      const vh = Math.max(1, Math.round((vv && vv.height) || window.innerHeight || document.documentElement.clientHeight));
       this.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
       this.c.width = Math.round(vw * this.dpr); this.c.height = Math.round(vh * this.dpr);
       this.scale = vh / CFG.logicalH; this.h = CFG.logicalH; this.w = vw / this.scale;
