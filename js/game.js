@@ -50,10 +50,15 @@
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return base;
       const d = JSON.parse(raw);
-      const unlocked = Array.isArray(d.unlocked)
-        ? d.unlocked.filter((id) => WORLD_IDS.includes(id))
-        : ['neon'];
-      if (!unlocked.includes('neon')) unlocked.unshift('neon');
+      // Only keep contiguous progression from neon — drops illicit portal unlocks
+      const rawUnlock = Array.isArray(d.unlocked) ? d.unlocked : ['neon'];
+      const unlocked = [];
+      for (const id of WORLD_IDS) {
+        if (id === 'neon' || rawUnlock.includes(id)) unlocked.push(id);
+        else break;
+        if (id === 'final') break;
+      }
+      if (!unlocked.length) unlocked.push('neon');
       return {
         coins: Math.max(0, Math.min(999999, Number(d.coins) || 0)),
         xp: Math.max(0, Number(d.xp) || 0),
@@ -72,6 +77,7 @@
   function persist() {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
   }
+  persist(); // rewrite save after contiguous-unlock sanitize
 
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -646,6 +652,7 @@
   }
 
   function startRun(keepWorld) {
+    if (!save.unlocked.includes(preferredOrigin)) preferredOrigin = 'neon';
     if (!keepWorld) {
       runtime = buildRuntimeConfig(
         preferredOrigin,
