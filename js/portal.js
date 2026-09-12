@@ -49,16 +49,17 @@
       return arr[arr.length - 1];
     }
 
-    /** Worlds available as destinations (excludes final unless unlocked). */
+    /** Worlds available as destinations. Never dumps the full catalog. */
     availablePool(originId, unlockedIds) {
       const W = global.RLWorlds.WORLDS;
+      const ids = Array.isArray(unlockedIds) ? unlockedIds : ['neon'];
+      let lastIdx = 0;
+      W.forEach((w, i) => { if (ids.includes(w.id)) lastIdx = i; });
+      const preview = W[Math.min(lastIdx + 1, W.length - 1)];
       return W.filter((w) => {
-        if (w.finalBoss && !unlockedIds.includes('final')) return false;
-        if (!unlockedIds.includes(w.id) && w.id !== originId) {
-          // Allow slightly "preview" destinations one tier ahead if streak high
-          if (this.streak < 2) return false;
-        }
-        return unlockedIds.includes(w.id) || w.id === 'neon';
+        if (w.finalBoss && !ids.includes('final')) return false;
+        if (ids.includes(w.id) || w.id === 'neon' || w.id === originId) return true;
+        return preview && w.id === preview.id && !w.finalBoss && this.streak >= 2;
       });
     }
 
@@ -72,7 +73,7 @@
         const diff = input.difficultyId || 'normal';
         const unlocked = input.unlockedIds || ['neon'];
         let pool = this.availablePool(originId, unlocked);
-        if (pool.length < 2) pool = global.RLWorlds.WORLDS.filter((w) => !w.finalBoss || unlocked.includes('final'));
+        if (!pool.length) pool = [global.RLWorlds.getWorld('neon')];
 
         // Prefer leaving origin when possible
         const destCandidates = pool.filter((w) => w.id !== originId);

@@ -35,16 +35,38 @@
   let preferredOrigin = 'neon';
 
   const SAVE_KEY = 'rl_save_v2';
+  const WORLD_IDS = WORLDS.map((w) => w.id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function sanitizeName(n) {
+    return String(n || 'Jugador').replace(/[^\wÁÉÍÓÚáéíóúñÑüÜ .'-]/g, '').trim().slice(0, 16) || 'Jugador';
+  }
   function loadSave() {
-    try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (raw) return JSON.parse(raw);
-    } catch (e) {}
-    return {
+    const base = {
       coins: 0, xp: 0, level: 1, name: 'Jugador',
       unlocked: ['neon'], legendary: false, intro: false,
       portalHistory: [], combos: [], bestDist: 0
     };
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return base;
+      const d = JSON.parse(raw);
+      const unlocked = Array.isArray(d.unlocked)
+        ? d.unlocked.filter((id) => WORLD_IDS.includes(id))
+        : ['neon'];
+      if (!unlocked.includes('neon')) unlocked.unshift('neon');
+      return {
+        coins: Math.max(0, Math.min(999999, Number(d.coins) || 0)),
+        xp: Math.max(0, Number(d.xp) || 0),
+        level: Math.max(1, Math.min(99, Number(d.level) || 1)),
+        name: sanitizeName(d.name),
+        unlocked,
+        legendary: !!d.legendary,
+        intro: !!d.intro,
+        portalHistory: Array.isArray(d.portalHistory) ? d.portalHistory.slice(-8).map(String) : [],
+        combos: Array.isArray(d.combos) ? d.combos.slice(-20).map((n) => Math.max(0, Number(n) || 0)) : [],
+        bestDist: Math.max(0, Number(d.bestDist) || 0)
+      };
+    } catch (e) { return base; }
   }
   let save = loadSave();
   function persist() {
@@ -663,11 +685,6 @@
     mgr.set('TRANSIT');
     transit.start(pendingOutcome, (outcome) => {
       runtime = outcome;
-      // Unlock destination if not final-gated wrongly
-      if (!save.unlocked.includes(outcome.worldId) && !outcome.world.finalBoss) {
-        save.unlocked.push(outcome.worldId);
-        persist();
-      }
       world.portalSpawned = false;
       world.segmentDist = 0;
       weatherFX.rebuild(view);
@@ -997,7 +1014,7 @@
   }
 
   function refreshMenuUI() {
-    $('profileName').textContent = save.name;
+    $('profileName').textContent = sanitizeName(save.name);
     $('profileLevel').textContent = 'Nivel ' + save.level;
     $('profileCoins').textContent = save.coins.toLocaleString();
     const xpNeed = save.level * 100;
@@ -1007,13 +1024,15 @@
       grid.innerHTML = WORLDS.map((w) => {
         const unlocked = save.unlocked.includes(w.id);
         const on = preferredOrigin === w.id;
-        return `<button type="button" class="world-tile${on ? ' on' : ''}${unlocked ? '' : ' lock'}" data-world="${w.id}" ${unlocked ? '' : 'disabled'}>
-          <b>${w.short}</b><span>${w.name}</span>${unlocked ? '' : '<i>🔒</i>'}
+        return `<button type="button" class="world-tile${on ? ' on' : ''}${unlocked ? '' : ' lock'}" data-world="${esc(w.id)}" ${unlocked ? '' : 'disabled'}>
+          <b>${esc(w.short)}</b><span>${esc(w.name)}</span>${unlocked ? '' : '<i>🔒</i>'}
         </button>`;
       }).join('');
       grid.querySelectorAll('[data-world]').forEach((btn) => {
         btn.addEventListener('click', () => {
-          preferredOrigin = btn.dataset.world;
+          const id = btn.dataset.world;
+          if (!save.unlocked.includes(id)) return;
+          preferredOrigin = id;
           refreshMenuUI();
         });
       });
@@ -1033,17 +1052,17 @@
       title.textContent = 'Mundos';
       body.innerHTML = WORLDS.map((w) => {
         const u = save.unlocked.includes(w.id);
-        return `<div class="info-card"><h3>${w.short} · ${w.name}${u ? '' : ' 🔒'}</h3>
-          <p>${w.description}</p>
-          <p class="meta">Regla: ${RLWorlds.getRule(w.specialRule).label} · Climas: ${w.weatherPool.map((id) => RLWorlds.getWeather(id).label).join(', ')}</p></div>`;
+        return `<div class="info-card"><h3>${esc(w.short)} · ${esc(w.name)}${u ? '' : ' 🔒'}</h3>
+          <p>${esc(w.description)}</p>
+          <p class="meta">Regla: ${esc(RLWorlds.getRule(w.specialRule).label)} · Climas: ${w.weatherPool.map((id) => esc(RLWorlds.getWeather(id).label)).join(', ')}</p></div>`;
       }).join('');
     } else if (which === 'profile') {
       title.textContent = 'Perfil';
-      body.innerHTML = `<div class="info-card"><h3>${save.name}</h3>
+      body.innerHTML = `<div class="info-card"><h3>${esc(save.name)}</h3>
         <p>Nivel ${save.level} · XP ${save.xp}/${save.level * 100}</p>
         <p>Monedas: ${save.coins} · Mejor distancia: ${save.bestDist || 0} m</p>
         <p>Mundos: ${save.unlocked.length}/10</p>
-        <p class="meta">Historial portal: ${(save.portalHistory || []).slice(-5).join(' → ') || '—'}</p></div>`;
+        <p class="meta">Historial portal: ${esc((save.portalHistory || []).slice(-5).join(' → ') || '—')}</p></div>`;
     } else if (which === 'shop') {
       title.textContent = 'Tienda';
       body.innerHTML = `<div class="info-card empty"><h3>Cosméticos</h3>
@@ -1057,14 +1076,13 @@
     } else if (which === 'settings') {
       title.textContent = 'Ajustes';
       body.innerHTML = `<div class="info-card">
-        <label>Nombre <input id="nameInput" maxlength="16" value="${save.name.replace(/"/g, '')}" /></label>
+        <label>Nombre <input id="nameInput" maxlength="16" value="${esc(save.name)}" /></label>
         <button type="button" class="btn ghost" id="saveName">Guardar</button>
         <button type="button" class="btn ghost" id="resetIntro">Ver intro de nuevo</button>
         <p class="meta">Audio: WebAudio on-demand · Master preparado</p></div>`;
       setTimeout(() => {
         $('saveName')?.addEventListener('click', () => {
-          const v = ($('nameInput').value || 'Jugador').trim().slice(0, 16);
-          save.name = v || 'Jugador'; persist(); refreshMenuUI();
+          save.name = sanitizeName($('nameInput').value); persist(); refreshMenuUI();
         });
         $('resetIntro')?.addEventListener('click', () => { save.intro = false; persist(); mgr.go('INTRO'); });
       }, 0);
