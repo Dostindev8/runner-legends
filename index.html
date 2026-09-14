@@ -129,6 +129,15 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 .dist-center{font-family:var(--font-display);font-weight:800;font-size:clamp(14px,3.8vw,22px);letter-spacing:.08em;
   text-shadow:0 0 12px rgba(0,0,0,.8);pointer-events:none}
 .hud-chips{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:6px;pointer-events:none;max-width:100%;padding:0 4px}
+.chip.gold{border-color:rgba(255,210,74,.55);color:#ffe7a0;box-shadow:0 0 14px rgba(255,210,74,.25)}
+.chip.gold[hidden]{display:none!important}
+.ach-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(120,160,255,.12)}
+.ach-row:last-child{border-bottom:0}
+.ach-ico{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:rgba(34,230,255,.12);border:1px solid rgba(34,230,255,.28);flex:0 0 auto}
+.ach-row.lock .ach-ico{opacity:.35;filter:grayscale(1)}
+.shop-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid rgba(120,160,255,.12)}
+.shop-row:last-child{border-bottom:0}
+.shop-swatch{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.35);box-shadow:0 0 12px currentColor}
 .chip{font-family:var(--font-display);font-size:7px;letter-spacing:.12em;padding:4px 7px;border-radius:999px;
   background:rgba(6,14,30,.55);border:1px solid rgba(255,210,74,.28);color:#ffe9a8;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chip.cyan{border-color:rgba(34,230,255,.35);color:#b8f0ff}
@@ -255,7 +264,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
         <div class="title-block">
           <div class="crown" aria-hidden="true">◆</div>
           <div class="title-lg">RUNNER<br/>LEGENDS</div>
-          <div class="sub">DISTRITO NEÓN · V3.1</div>
+          <div class="sub">DISTRITO NEÓN · V3.2</div>
         </div>
 
         <div class="glass char-card">
@@ -317,6 +326,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
       <span class="chip cyan" id="worldChip">DISTRITO NEÓN</span>
       <span class="chip cyan" id="weatherChip">—</span>
       <span class="chip" id="ruleChip">⚡</span>
+      <span class="chip gold" id="comboChip" hidden>COMBO ×0</span>
     </div>
     <div class="super-wrap">
       <div class="super-label">EXPLOSIÓN ESTELAR</div>

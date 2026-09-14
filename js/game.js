@@ -1,5 +1,5 @@
 /**
- * Runner Legends v3.1 — Game engine (Mega Directiva v2.0)
+ * Runner Legends v3.2 — Game engine (Mega Directiva v2.0)
  * Depends: RLWorlds, RLPortal (loaded first).
  */
 (function () {
@@ -16,11 +16,11 @@
     logicalH: 540, ground: 96,
     gravity: 2050, jumpVel: -790, jumpCut: 0.42,
     coyote: 0.10, buffer: 0.10,
-    runStart: 340, runMax: 560, runAccel: 6.5,
+    runStart: 340, runMax: 580, runAccel: 7.2,
     player: { w: 46, h: 66, x: 0.26 },
     iframes: 1.1, maxHP: 3,
-    superChargePerCoin: 0.01, superChargePerSec: 1 / 45,
-    portalAt: 220
+    superChargePerCoin: 0.012, superChargePerSec: 1 / 40,
+    portalAt: 220, comboWindow: 1.65
   };
 
   const DIFF = {
@@ -29,6 +29,24 @@
     expert: { id: 'expert', label: 'Experto', scroll: 1.3, coyote: 0.06, buffer: 0.06, density: 1.35, reward: 1.5, chip: 'EXPERTO' },
     legendary: { id: 'legendary', label: 'Legendario', scroll: 1.45, coyote: 0.04, buffer: 0.04, density: 1.5, reward: 2.0, chip: 'LEGENDARIO' }
   };
+
+  const TRAILS = [
+    { id: 'neon', name: 'Estela Neón', price: 0, col: '#22e6ff' },
+    { id: 'gold', name: 'Estela Dorada', price: 80, col: '#ffd24a' },
+    { id: 'magenta', name: 'Plasma Magenta', price: 140, col: '#ff2bd6' },
+    { id: 'void', name: 'Estela Vacío', price: 220, col: '#a78bfa' }
+  ];
+
+  const ACHIEVEMENTS = [
+    { id: 'first_run', icon: '▶', label: 'Primer Distrito', desc: 'Completa una carrera' },
+    { id: 'dist_400', icon: '🏃', label: 'Sprinter', desc: 'Alcanza 400 m en una carrera' },
+    { id: 'dist_800', icon: '🚀', label: 'Legend Runner', desc: 'Alcanza 800 m en una carrera' },
+    { id: 'combo_12', icon: '✦', label: 'Combo ×12', desc: 'Encadena 12 monedas sin fallar' },
+    { id: 'portal_3', icon: '🌀', label: 'Saltador dimensional', desc: 'Cruza 3 portales en total' },
+    { id: 'worlds_3', icon: '🗺️', label: 'Explorador', desc: 'Desbloquea 3 mundos' },
+    { id: 'super_1', icon: '💥', label: 'Explosión Estelar', desc: 'Activa el súper al menos una vez' },
+    { id: 'rich_200', icon: '◎', label: 'Bóveda Neón', desc: 'Acumula 200 monedas totales' }
+  ];
 
   let activeDiff = DIFF.normal;
   let runtime = buildRuntimeConfig('neon', 'clear_night', 'extreme_speed', 'normal');
@@ -44,7 +62,9 @@
     const base = {
       coins: 0, xp: 0, level: 1, name: 'Jugador',
       unlocked: ['neon'], legendary: false, intro: false,
-      portalHistory: [], combos: [], bestDist: 0
+      portalHistory: [], combos: [], bestDist: 0,
+      bestCombo: 0, runs: 0, portals: 0, supers: 0,
+      trail: 'neon', ownedTrails: ['neon'], achievements: {}
     };
     try {
       const raw = localStorage.getItem(SAVE_KEY);
@@ -59,6 +79,12 @@
         if (id === 'final') break;
       }
       if (!unlocked.length) unlocked.push('neon');
+      const ownedTrails = Array.isArray(d.ownedTrails)
+        ? d.ownedTrails.filter((id) => TRAILS.some((t) => t.id === id))
+        : ['neon'];
+      if (!ownedTrails.includes('neon')) ownedTrails.unshift('neon');
+      const trail = ownedTrails.includes(d.trail) ? d.trail : 'neon';
+      const achievements = (d.achievements && typeof d.achievements === 'object') ? d.achievements : {};
       return {
         coins: Math.max(0, Math.min(999999, Number(d.coins) || 0)),
         xp: Math.max(0, Number(d.xp) || 0),
@@ -69,7 +95,14 @@
         intro: !!d.intro,
         portalHistory: Array.isArray(d.portalHistory) ? d.portalHistory.slice(-8).map(String) : [],
         combos: Array.isArray(d.combos) ? d.combos.slice(-20).map((n) => Math.max(0, Number(n) || 0)) : [],
-        bestDist: Math.max(0, Number(d.bestDist) || 0)
+        bestDist: Math.max(0, Number(d.bestDist) || 0),
+        bestCombo: Math.max(0, Number(d.bestCombo) || 0),
+        runs: Math.max(0, Number(d.runs) || 0),
+        portals: Math.max(0, Number(d.portals) || 0),
+        supers: Math.max(0, Number(d.supers) || 0),
+        trail,
+        ownedTrails,
+        achievements
       };
     } catch (e) { return base; }
   }
@@ -78,6 +111,32 @@
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
   }
   persist(); // rewrite save after contiguous-unlock sanitize
+
+  function trailColor() {
+    const t = TRAILS.find((x) => x.id === save.trail);
+    return (t && t.col) || '#22e6ff';
+  }
+
+  function grantAchievement(id) {
+    if (save.achievements[id]) return false;
+    const def = ACHIEVEMENTS.find((a) => a.id === id);
+    if (!def) return false;
+    save.achievements[id] = Date.now();
+    persist();
+    flashToast('LOGRO · ' + def.label);
+    return true;
+  }
+
+  function evaluateAchievements(run) {
+    if (save.runs >= 1) grantAchievement('first_run');
+    if ((run && run.dist >= 400) || save.bestDist >= 400) grantAchievement('dist_400');
+    if ((run && run.dist >= 800) || save.bestDist >= 800) grantAchievement('dist_800');
+    if ((run && run.combo >= 12) || save.bestCombo >= 12) grantAchievement('combo_12');
+    if (save.portals >= 3) grantAchievement('portal_3');
+    if (save.unlocked.length >= 3) grantAchievement('worlds_3');
+    if (save.supers >= 1) grantAchievement('super_1');
+    if (save.coins >= 200) grantAchievement('rich_200');
+  }
 
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -117,30 +176,40 @@
   const clock = new Clock();
 
   const audio = {
-    ctx: null,
+    ctx: null, master: null,
     init() {
-      if (this.ctx) return;
+      if (this.ctx) {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        return;
+      }
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.55;
+      this.master.connect(this.ctx.destination);
     },
     beep(freq, dur, type, gain) {
-      if (!this.ctx) return;
+      if (!this.ctx || !this.master) return;
+      const t0 = this.ctx.currentTime;
       const o = this.ctx.createOscillator();
       const g = this.ctx.createGain();
-      o.type = type || 'sine'; o.frequency.value = freq;
-      g.gain.value = gain || 0.04;
-      o.connect(g); g.connect(this.ctx.destination);
-      o.start();
-      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
-      o.stop(this.ctx.currentTime + dur + 0.02);
+      o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(gain || 0.04, t0);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+      o.connect(g); g.connect(this.master);
+      o.start(t0); o.stop(t0 + dur + 0.03);
     },
-    jump() { this.beep(420, 0.08, 'triangle', 0.05); },
-    land() { this.beep(120, 0.06, 'sine', 0.04); },
-    coin() { this.beep(880, 0.05, 'square', 0.03); },
-    hurt() { this.beep(90, 0.15, 'sawtooth', 0.05); },
-    portal() { this.beep(180, 0.25, 'sine', 0.06); this.beep(360, 0.35, 'triangle', 0.04); },
-    superFx() { this.beep(220, 0.2, 'sawtooth', 0.05); this.beep(440, 0.3, 'square', 0.03); }
+    chord(freqs, dur, type, gain) {
+      for (let i = 0; i < freqs.length; i++) this.beep(freqs[i], dur, type, (gain || 0.03) * (1 - i * 0.15));
+    },
+    jump() { this.beep(460, 0.07, 'triangle', 0.05); this.beep(620, 0.05, 'sine', 0.025); },
+    land() { this.beep(110, 0.07, 'sine', 0.045); },
+    coin() { this.beep(980, 0.045, 'square', 0.028); this.beep(1320, 0.06, 'sine', 0.018); },
+    hurt() { this.beep(88, 0.16, 'sawtooth', 0.05); this.beep(55, 0.2, 'triangle', 0.03); },
+    portal() { this.chord([160, 240, 320, 480], 0.4, 'sine', 0.045); },
+    superFx() { this.chord([180, 270, 360, 540], 0.35, 'sawtooth', 0.04); this.beep(720, 0.2, 'square', 0.025); },
+    combo() { this.beep(760 + Math.min(economy.combo, 20) * 18, 0.04, 'triangle', 0.03); }
   };
   bus.on('jump', () => audio.jump());
   bus.on('land', () => audio.land());
@@ -292,6 +361,22 @@
       } else if (runtime.particle === 'heat' || runtime.particle === 'embers') {
         ctx.fillStyle = 'rgba(255,100,40,0.5)';
         for (const d of this.drops) { ctx.fillRect(d.x, d.y, 2, 3); }
+      } else if (runtime.particle === 'glitch' || runtime.particle === 'meteors') {
+        ctx.fillStyle = pal.accent;
+        for (const d of this.drops) {
+          ctx.globalAlpha = 0.35;
+          if (runtime.particle === 'meteors') {
+            ctx.fillRect(d.x, d.y, 3, d.len * 0.5);
+          } else {
+            ctx.fillRect(d.x + Math.sin(this.t * 20 + d.y) * 4, d.y, rand(2, 8), 2);
+          }
+        }
+      } else if (runtime.particle === 'aurora' || runtime.particle === 'stars') {
+        for (const d of this.drops) {
+          ctx.globalAlpha = 0.2 + Math.sin(this.t + d.x) * 0.15;
+          ctx.fillStyle = d.x % 2 ? '#7ef0c0' : '#a78bfa';
+          ctx.beginPath(); ctx.arc(d.x, d.y, 1.8, 0, 6.283); ctx.fill();
+        }
       } else {
         ctx.fillStyle = pal.accent;
         for (const d of this.drops) { ctx.globalAlpha = 0.25; ctx.fillRect(d.x, d.y, 2, 2); }
@@ -351,12 +436,20 @@
           ctx.fillStyle = pal.mid;
           ctx.fillRect(b.x, y, L.w * 0.62, h);
           if (b.lit) {
-            ctx.fillStyle = pal.accent.replace(')', ',0.18)').replace('rgb', 'rgba').replace('#', '');
-            // simple neon windows
+            ctx.fillStyle = pal.accent + '22';
+            // fallback if accent is hex without alpha helper
             ctx.fillStyle = 'rgba(34,230,255,0.12)';
-            if (runtime.worldId === 'neon') ctx.fillStyle = 'rgba(255,43,214,0.1)';
+            if (runtime.worldId === 'neon') ctx.fillStyle = 'rgba(255,43,214,0.14)';
+            else if (runtime.worldId === 'golden') ctx.fillStyle = 'rgba(255,200,80,0.12)';
+            else if (runtime.worldId === 'ice') ctx.fillStyle = 'rgba(180,230,255,0.14)';
+            else if (runtime.worldId === 'igneous') ctx.fillStyle = 'rgba(255,100,40,0.14)';
             for (let wy = y + 14; wy < base - 12; wy += 22) ctx.fillRect(b.x + 8, wy, L.w * 0.46, 3);
           }
+          // Roof neon accent bar
+          ctx.fillStyle = pal.accent;
+          ctx.globalAlpha = 0.35;
+          ctx.fillRect(b.x, y, L.w * 0.62, 2);
+          ctx.globalAlpha = 1;
         }
       }
       // Wet ground reflection strip (neon) — composition, not texture res
@@ -376,12 +469,13 @@
 
   const PS = { GROUND: 0, AIR: 1 };
   class Player {
-    constructor() { this.reset(); this.slideVx = 0; }
+    constructor() { this.reset(); this.slideVx = 0; this.trail = []; }
     reset() {
       this.state = PS.GROUND; this.vy = 0; this.y = 0; this.onGround = true;
       this.coyoteT = 0; this.bufferT = 0; this.jumpsUsed = 0;
       this.sx = 1; this.sy = 1; this.hp = CFG.maxHP; this.iframe = 0; this.dead = false;
       this.jumpMul = 1; this._wasAir = false; this.runPhase = 0; this.slideVx = 0; this.heatAcc = 0;
+      this.trail = []; this.superGlow = 0;
     }
     get x() { return view.w * CFG.player.x + this.slideVx; }
     get w() { return CFG.player.w; }
@@ -392,6 +486,7 @@
       const coyote = activeDiff.coyote * (runtime.reactionWindow || 1);
       const buffer = activeDiff.buffer;
       const grav = CFG.gravity * runtime.gravityMul;
+      const maxJumps = (runtime.floatControl || runtime.localGravityFlip) ? 2 : 1;
       if (input.consumeJump()) this.bufferT = buffer;
       this.bufferT = Math.max(0, this.bufferT - dt);
       const supported = world.groundAt(this.x) && this.feetY >= gY - 1.5;
@@ -402,38 +497,54 @@
         this.onGround = false; this.state = PS.AIR; this.coyoteT = Math.max(0, this.coyoteT - dt);
       }
       const canGround = (this.onGround || this.coyoteT > 0) && this.jumpsUsed === 0;
-      if (this.bufferT > 0 && canGround) {
-        this.vy = CFG.jumpVel * this.jumpMul * runtime.jumpMul;
-        this.bufferT = 0; this.coyoteT = 0; this.jumpsUsed = 1;
+      const canAir = !canGround && this.jumpsUsed > 0 && this.jumpsUsed < maxJumps && this.bufferT > 0;
+      if (this.bufferT > 0 && (canGround || canAir)) {
+        const airMul = canAir ? 0.88 : 1;
+        this.vy = CFG.jumpVel * this.jumpMul * runtime.jumpMul * airMul;
+        this.bufferT = 0; this.coyoteT = 0; this.jumpsUsed = Math.max(1, this.jumpsUsed + 1);
         this.onGround = false; this.state = PS.AIR; this.sx = 0.78; this.sy = 1.28;
-        particles.dust(this.x, gY); bus.emit('jump');
+        particles.dust(this.x, canAir ? this.y + this.h : gY); bus.emit('jump');
+        if (canAir) particles.burst(this.x, this.y + this.h * 0.5, 10, { col: trailColor(), spMax: 160, lifeMax: 0.35, g: 200 });
       }
       if (input.consumeRelease() && this.vy < 0) this.vy *= CFG.jumpCut;
       this.vy += grav * dt; this.y += this.vy * dt;
-      // Slippery slide after land
       if (this.onGround && this.state === PS.GROUND && this._wasAir) {
         this.sx = 1.28; this.sy = 0.74; particles.dust(this.x, gY); shake.add(0.14); bus.emit('land');
         if (runtime.slideOnLand) this.slideVx = rand(6, 14) * (Math.random() < 0.5 ? 1 : -1);
       }
       this._wasAir = !this.onGround;
       this.slideVx = lerp(this.slideVx, 0, clamp(dt * (2 + runtime.friction * 4), 0, 1));
-      // Lateral weather push
       if (runtime.lateralPush) this.slideVx += Math.sin(performance.now() * 0.002) * runtime.lateralPush * dt * 0.02;
       this.slideVx = clamp(this.slideVx, -28, 28);
       if (this.y > view.h + 40) this.kill(true);
       this.sx = lerp(this.sx, 1, clamp(dt * 12, 0, 1));
       this.sy = lerp(this.sy, 1, clamp(dt * 12, 0, 1));
       this.iframe = Math.max(0, this.iframe - dt);
+      this.superGlow = Math.max(0, this.superGlow - dt);
       if (runtime.heatZones || runtime.heatDps) {
         this.heatAcc += (runtime.heatDps || 0.08) * dt;
         if (this.heatAcc > 1.2) { this.heatAcc = 0; this.hurt(); }
       }
       if (runtime.ovations && Math.random() < dt * 0.08) shake.add(0.08);
+      // Motion trail
+      if (mgr.state === 'PLAY' && !this.dead) {
+        this.trail.push({ x: this.x, y: this.y + this.h * 0.45, life: 0.22 });
+        if (this.trail.length > 10) this.trail.shift();
+        for (const t of this.trail) t.life -= dt;
+        this.trail = this.trail.filter((t) => t.life > 0);
+        if (Math.random() < dt * 14) {
+          particles.burst(this.x - 8, this.y + this.h * 0.7, 1, {
+            col: trailColor(), spMin: 10, spMax: 40, lifeMin: 0.15, lifeMax: 0.35,
+            sMin: 2, sMax: 4, g: 40, up: 20
+          });
+        }
+      }
     }
     hurt() {
       if (this.iframe > 0 || this.dead) return;
       this.hp--; this.iframe = CFG.iframes; shake.add(0.55); clock.freeze(0.06);
       particles.burst(this.x, this.y + this.h * 0.4, 18, { col: '#ff5a7a', spMax: 260, up: 60 });
+      economy.breakCombo();
       bus.emit('hurt');
       if (this.hp <= 0) this.kill(false);
     }
@@ -447,18 +558,29 @@
 
   class Economy {
     constructor() { this.reset(); }
-    reset() { this.coins = 0; this.combo = 0; this.maxCombo = 0; this.super = 0; this.buffT = 0; this.mult = 1; }
+    reset() {
+      this.coins = 0; this.combo = 0; this.maxCombo = 0; this.super = 0;
+      this.buffT = 0; this.mult = 1; this.comboT = 0;
+    }
+    breakCombo() { this.combo = 0; this.comboT = 0; }
     addCoin() {
       const m = this.buffT > 0 ? 2 : 1;
-      this.coins += Math.round(1 * activeDiff.reward * m);
+      const comboMul = 1 + Math.min(0.5, this.combo * 0.03);
+      this.coins += Math.round(1 * activeDiff.reward * m * comboMul);
       this.combo++; this.maxCombo = Math.max(this.maxCombo, this.combo);
+      this.comboT = CFG.comboWindow;
       this.super = Math.min(1, this.super + CFG.superChargePerCoin * 1.2);
       audio.coin();
+      if (this.combo >= 5 && this.combo % 5 === 0) { audio.combo(); flashToast('COMBO ×' + this.combo); }
     }
     buff(mult, t) { this.mult = mult; this.buffT = t; }
     update(dt) {
       this.super = Math.min(1, this.super + CFG.superChargePerSec * dt);
       if (this.buffT > 0) this.buffT -= dt; else this.mult = 1;
+      if (this.combo > 0) {
+        this.comboT -= dt;
+        if (this.comboT <= 0) this.breakCombo();
+      }
     }
   }
 
@@ -687,7 +809,9 @@
       streak: save.combos.length
     });
     save.portalHistory = resolver.history.slice();
+    save.portals = (save.portals || 0) + 1;
     persist();
+    evaluateAchievements(null);
     flashToast('PORTAL · ' + pendingOutcome.world.name.toUpperCase());
     mgr.set('TRANSIT');
     transit.start(pendingOutcome, (outcome) => {
@@ -718,9 +842,12 @@
   function fireSuper() {
     if (economy.super < 1 || player.dead) return;
     economy.super = 0; shake.add(1); clock.freeze(0.09); audio.superFx();
+    player.superGlow = 1.4;
     particles.burst(player.x, player.y + player.h * 0.4, 60, { col: '#ffd24a', spMax: 520, up: 120, lifeMax: 0.9 });
     const n = world.clearEnemies(); economy.buff(2, 2.0);
     economy.coins += Math.round(n * 5 * activeDiff.reward);
+    save.supers = (save.supers || 0) + 1; persist();
+    evaluateAchievements(null);
     flashToast('¡EXPLOSIÓN ESTELAR!');
   }
 
@@ -732,8 +859,12 @@
     $('rDiff').textContent = activeDiff.label;
     $('rWorld').textContent = runtime.world.name + ' · ' + runtime.weather.label;
     save.coins += c;
-    save.xp += Math.round(d / 10 + c * 2);
+    save.xp += Math.round(d / 10 + c * 2 + mc);
     save.bestDist = Math.max(save.bestDist || 0, d);
+    save.bestCombo = Math.max(save.bestCombo || 0, mc);
+    save.runs = (save.runs || 0) + 1;
+    save.combos.push(mc);
+    if (save.combos.length > 20) save.combos = save.combos.slice(-20);
     while (save.xp >= save.level * 100) { save.xp -= save.level * 100; save.level++; }
     if (activeDiff.id === 'expert' && stars === 3) {
       save.legendary = true;
@@ -754,6 +885,7 @@
       save.unlocked.push('final');
     }
     persist();
+    evaluateAchievements({ dist: d, combo: mc });
     refreshMenuUI();
   }
 
@@ -774,6 +906,13 @@
     $('ruleChip').textContent = runtime.rule.icon + ' ' + runtime.rule.label;
     $('worldChip').textContent = runtime.world.name.toUpperCase();
     $('weatherChip').textContent = runtime.weather.label;
+    const cc = $('comboChip');
+    if (cc) {
+      if (economy.combo >= 2) {
+        cc.hidden = false;
+        cc.textContent = 'COMBO ×' + economy.combo;
+      } else cc.hidden = true;
+    }
   }
 
   // —— Draw helpers ——
@@ -793,31 +932,53 @@
 
   function drawWorld(ctx, v) {
     const gY = v.groundY;
+    const pal = runtime.world.palette;
+    const t = performance.now() * 0.001;
     world.crates.forEach((o) => {
-      ctx.fillStyle = '#3a2060'; ctx.fillRect(o.x, o.y, o.w, o.h);
-      ctx.strokeStyle = runtime.world.palette.accent; ctx.strokeRect(o.x, o.y, o.w, o.h);
+      const g = ctx.createLinearGradient(o.x, o.y, o.x, o.y + o.h);
+      g.addColorStop(0, '#4a2a78'); g.addColorStop(1, '#1a1030');
+      ctx.fillStyle = g; ctx.fillRect(o.x, o.y, o.w, o.h);
+      ctx.strokeStyle = pal.accent; ctx.lineWidth = 1.5; ctx.strokeRect(o.x + 0.5, o.y + 0.5, o.w - 1, o.h - 1);
+      ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(o.x + 6, o.y + 6, o.w - 12, 4);
     });
     world.drones.forEach((o) => {
       const bob = Math.sin(o.ph) * 6;
-      ctx.fillStyle = '#2a4060';
+      const eg = ctx.createRadialGradient(o.x, o.y + bob, 2, o.x, o.y + bob, o.w / 2);
+      eg.addColorStop(0, '#4a7090'); eg.addColorStop(1, '#152030');
+      ctx.fillStyle = eg;
       ctx.beginPath(); ctx.ellipse(o.x, o.y + bob, o.w / 2, o.h / 2, 0, 0, 6.283); ctx.fill();
-      ctx.fillStyle = '#ff4060'; ctx.fillRect(o.x - 4, o.y + bob - 2, 8, 4);
+      ctx.fillStyle = '#ff4060';
+      ctx.shadowColor = '#ff4060'; ctx.shadowBlur = 8;
+      ctx.fillRect(o.x - 5, o.y + bob - 3, 10, 5);
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(160,220,255,0.45)'; ctx.stroke();
     });
     world.coins.forEach((o) => {
       if (o.taken) return;
-      ctx.fillStyle = '#ffd24a';
-      ctx.beginPath(); ctx.arc(o.x, o.y + Math.sin(o.ph) * 3, o.r, 0, 6.283); ctx.fill();
+      const bob = Math.sin(o.ph) * 3;
+      ctx.save();
+      ctx.translate(o.x, o.y + bob);
+      ctx.rotate(Math.sin(o.ph * 0.5) * 0.2);
+      const cg = ctx.createRadialGradient(-2, -2, 1, 0, 0, o.r);
+      cg.addColorStop(0, '#fff6c0'); cg.addColorStop(0.55, '#ffd24a'); cg.addColorStop(1, '#c88810');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(0, 0, o.r, 0, 6.283); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath(); ctx.arc(-3, -3, 2.5, 0, 6.283); ctx.fill();
+      ctx.restore();
     });
     world.portals.forEach((o) => {
       drawPortalEntity(ctx, o, gY);
     });
+    // Near-miss spark when clearing crates closely
+    void t;
   }
 
   function drawPortalEntity(ctx, o, gY) {
     const cx = o.x, cy = gY - o.h * 0.5;
-    // Sangrado dimensional — fragments around vortex
+    const t = performance.now() * 0.001;
     (o.bleed || []).forEach((b, i) => {
-      const ang = performance.now() * 0.001 + b.ph;
+      const ang = t + b.ph;
       const x = cx + b.ox + Math.cos(ang) * 8;
       const y = cy + b.oy + Math.sin(ang * 1.3) * 6;
       ctx.globalAlpha = 0.55;
@@ -825,13 +986,19 @@
       ctx.fillRect(x, y, b.size, b.size * 0.7);
     });
     ctx.globalAlpha = 1;
-    const grd = ctx.createRadialGradient(cx, cy, 4, cx, cy, 50);
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(180,240,255,${0.35 - i * 0.08})`;
+      ctx.lineWidth = 2 - i * 0.4;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 18 + i * 8 + Math.sin(t * 3 + i) * 2, 42 + i * 6, t * (0.6 + i * 0.2), 0, 6.283);
+      ctx.stroke();
+    }
+    const grd = ctx.createRadialGradient(cx, cy, 4, cx, cy, 52);
     grd.addColorStop(0, 'rgba(255,255,255,0.95)');
     grd.addColorStop(0.4, 'rgba(120,220,255,0.7)');
     grd.addColorStop(1, 'rgba(34,230,255,0.05)');
     ctx.fillStyle = grd;
     ctx.beginPath(); ctx.ellipse(cx, cy, 22, 48, 0, 0, 6.283); ctx.fill();
-    ctx.strokeStyle = 'rgba(180,240,255,0.95)'; ctx.lineWidth = 2; ctx.stroke();
   }
 
   function drawKori(ctx, v, idle) {
@@ -839,15 +1006,45 @@
     const cx = idle ? v.w * 0.5 : p.x;
     const top = idle ? v.groundY - p.h : p.y;
     const w = p.w * p.sx, h = p.h * p.sy;
+    const bob = idle ? Math.sin(performance.now() * 0.004) * 3 : (p.onGround ? Math.sin((p.runPhase || 0) * 14) * 2 : 0);
+    const col = trailColor();
     ctx.save();
-    ctx.translate(cx, top + h / 2);
-    ctx.fillStyle = '#1a3a8a';
+    // Trail ghosts
+    if (!idle && p.trail) {
+      for (let i = 0; i < p.trail.length; i++) {
+        const tr = p.trail[i];
+        ctx.globalAlpha = clamp(tr.life * 2.2, 0, 0.35);
+        ctx.fillStyle = col;
+        ctx.fillRect(tr.x - w * 0.35, tr.y - h * 0.35, w * 0.7, h * 0.55);
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.translate(cx, top + h / 2 + bob);
+    if (p.iframe > 0 && Math.floor(performance.now() / 60) % 2 === 0) ctx.globalAlpha = 0.45;
+    if (p.superGlow > 0 || (economy && economy.buffT > 0)) {
+      ctx.shadowColor = '#ffd24a'; ctx.shadowBlur = 18;
+    } else {
+      ctx.shadowColor = col; ctx.shadowBlur = 10;
+    }
+    // Body
+    const body = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+    body.addColorStop(0, '#2a55c8'); body.addColorStop(1, '#0d1f5c');
+    ctx.fillStyle = body;
     ctx.fillRect(-w / 2, -h / 2, w, h);
+    // Visor
+    ctx.shadowBlur = 0;
     ctx.fillStyle = '#ff2bd6';
-    ctx.fillRect(-w / 2 + 4, -h / 2 + 10, w - 8, 8);
+    ctx.fillRect(-w / 2 + 5, -h / 2 + 12, w - 10, 9);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(-w / 2 + 8, -h / 2 + 14, w * 0.35, 3);
+    // Thrusters / feet
     ctx.fillStyle = '#ffd24a';
-    ctx.fillRect(-w / 2 - 2, h / 2 - 10, 8, 8);
-    ctx.fillRect(w / 2 - 6, h / 2 - 10, 8, 8);
+    const kick = idle ? 0 : Math.sin((p.runPhase || 0) * 14) * 4;
+    ctx.fillRect(-w / 2 - 1, h / 2 - 12 + kick, 9, 9);
+    ctx.fillRect(w / 2 - 8, h / 2 - 12 - kick, 9, 9);
+    // Chest core
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(0, 2, 5, 0, 6.283); ctx.fill();
     ctx.restore();
   }
 
@@ -1068,13 +1265,51 @@
       body.innerHTML = `<div class="info-card"><h3>${esc(save.name)}</h3>
         <p>Nivel ${save.level} · XP ${save.xp}/${save.level * 100}</p>
         <p>Monedas: ${save.coins} · Mejor distancia: ${save.bestDist || 0} m</p>
-        <p>Mundos: ${save.unlocked.length}/10</p>
+        <p>Mejor combo: ${save.bestCombo || 0} · Carreras: ${save.runs || 0}</p>
+        <p>Mundos: ${save.unlocked.length}/10 · Portales: ${save.portals || 0}</p>
         <p class="meta">Historial portal: ${esc((save.portalHistory || []).slice(-5).join(' → ') || '—')}</p></div>`;
+    } else if (which === 'achievements') {
+      title.textContent = 'Logros';
+      const unlockedN = ACHIEVEMENTS.filter((a) => save.achievements[a.id]).length;
+      body.innerHTML = `<div class="info-card"><p class="meta">${unlockedN}/${ACHIEVEMENTS.length} desbloqueados</p>` +
+        ACHIEVEMENTS.map((a) => {
+          const ok = !!save.achievements[a.id];
+          return `<div class="ach-row${ok ? '' : ' lock'}"><div class="ach-ico">${a.icon}</div>
+            <div><b>${esc(a.label)}</b><p class="meta">${esc(a.desc)}${ok ? ' · ✓' : ''}</p></div></div>`;
+        }).join('') + '</div>';
     } else if (which === 'shop') {
       title.textContent = 'Tienda';
-      body.innerHTML = `<div class="info-card empty"><h3>Cosméticos</h3>
-        <p>Arquitectura lista. Sin monetización real en esta build.</p>
-        <p class="meta">Saldo: ${save.coins} monedas (persistente)</p></div>`;
+      body.innerHTML = `<div class="info-card"><h3>Estelas de Kori</h3>
+        <p class="meta">Saldo: ${save.coins} monedas · Activa: ${esc((TRAILS.find((t) => t.id === save.trail) || TRAILS[0]).name)}</p>` +
+        TRAILS.map((t) => {
+          const owned = save.ownedTrails.includes(t.id);
+          const on = save.trail === t.id;
+          const action = on ? 'Equipada' : owned ? 'Equipar' : `Comprar · ${t.price}`;
+          return `<div class="shop-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="shop-swatch" style="color:${esc(t.col)};background:${esc(t.col)}"></span>
+              <div><b>${esc(t.name)}</b><p class="meta">${owned ? 'En inventario' : t.price + ' monedas'}</p></div>
+            </div>
+            <button type="button" class="btn ghost" data-trail="${esc(t.id)}" ${on ? 'disabled' : ''}>${action}</button>
+          </div>`;
+        }).join('') + '</div>';
+      setTimeout(() => {
+        body.querySelectorAll('[data-trail]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.trail;
+            const item = TRAILS.find((t) => t.id === id);
+            if (!item) return;
+            if (!save.ownedTrails.includes(id)) {
+              if (save.coins < item.price) { flashToast('Monedas insuficientes'); return; }
+              save.coins -= item.price;
+              save.ownedTrails.push(id);
+            }
+            save.trail = id;
+            persist(); refreshMenuUI(); openPanel('shop');
+            flashToast('Estela · ' + item.name);
+          });
+        });
+      }, 0);
     } else if (which === 'tournament') {
       title.textContent = 'Torneo';
       body.innerHTML = `<div class="info-card empty"><h3>Ranking de temporada</h3>
@@ -1145,7 +1380,7 @@
         if (n === 'home') showLayer('menu');
         else if (n === 'worlds') openPanel('worlds');
         else if (n === 'shop') openPanel('shop');
-        else if (n === 'achievements') openPanel('profile');
+        else if (n === 'achievements') openPanel('achievements');
         else if (n === 'settings') openPanel('settings');
       });
     });
@@ -1170,6 +1405,7 @@
         player: () => player, world: () => world, econ: () => economy
       };
     }
+    evaluateAchievements(null);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
