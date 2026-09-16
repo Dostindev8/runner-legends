@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#04010c" />
 <meta name="description" content="Runner Legends — Distrito Neón. Portales variables, reglas dimensionales. Logic Code Spot." />
+<link rel="manifest" href="manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
 <title>Runner Legends · Distrito Neón</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -138,6 +140,20 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 .shop-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid rgba(120,160,255,.12)}
 .shop-row:last-child{border-bottom:0}
 .shop-swatch{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.35);box-shadow:0 0 12px currentColor}
+.char-hub{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:8px}
+@media(min-width:600px){.char-hub{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.char-card-v6{padding:10px;border:1px solid rgba(120,220,255,.22);border-radius:12px;background:rgba(6,12,28,.55)}
+.char-card-v6.lock{opacity:.55}
+.char-card-v6 h3{font-family:var(--font-display);font-size:11px;letter-spacing:.06em;margin-bottom:4px}
+.char-card-v6 p{font-size:12px;line-height:1.3;opacity:.85}
+#bootLoad{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#04010c;color:#eaf6ff;font-family:var(--font-ui)}
+#bootLoad.hidden{display:none!important}
+#bootLoad .bar{width:min(240px,70vw);height:6px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden}
+#bootLoad .bar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--neon),var(--magenta));transition:width .2s ease}
+#netPill{position:absolute;top:calc(8px + var(--safe-t));left:50%;transform:translateX(-50%);z-index:35;pointer-events:none;
+  font-size:10px;letter-spacing:.12em;font-weight:700;padding:4px 10px;border-radius:999px;
+  background:rgba(6,12,28,.7);border:1px solid rgba(120,220,255,.25);opacity:.85}
+#netPill.off{border-color:rgba(255,90,122,.45);color:#ff8aa0}
 .chip{font-family:var(--font-display);font-size:7px;letter-spacing:.12em;padding:4px 7px;border-radius:999px;
   background:rgba(6,14,30,.55);border:1px solid rgba(255,210,74,.28);color:#ffe9a8;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chip.cyan{border-color:rgba(34,230,255,.35);color:#b8f0ff}
@@ -235,8 +251,15 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 </style>
 </head>
 <body>
+<div id="bootLoad" aria-live="polite">
+  <div class="brand-mark" style="width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-family:Orbitron,sans-serif;font-weight:900;border:1px solid rgba(120,220,255,.35);background:linear-gradient(145deg,rgba(34,230,255,.25),rgba(255,43,214,.2))">RL</div>
+  <div style="font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:.2em">CARGANDO DISTRITO</div>
+  <div class="bar"><i id="bootBar"></i></div>
+  <div id="bootPct" style="font-size:12px;opacity:.7">0%</div>
+</div>
 <div id="stage">
   <canvas id="game" aria-label="Runner Legends gameplay"></canvas>
+  <div id="netPill" hidden>ONLINE</div>
 
   <div id="menu" class="layer hidden" role="dialog" aria-label="Menú principal">
     <header class="topbar">
@@ -264,7 +287,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
         <div class="title-block">
           <div class="crown" aria-hidden="true">◆</div>
           <div class="title-lg">RUNNER<br/>LEGENDS</div>
-          <div class="sub">DISTRITO NEÓN · V3.2</div>
+          <div class="sub">DISTRITO NEÓN · V6.0</div>
         </div>
 
         <div class="glass char-card">
@@ -369,6 +392,57 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 
 <script src="js/worlds.js"></script>
 <script src="js/portal.js"></script>
+<script src="js/content-v6.js"></script>
 <script src="js/game.js"></script>
+<script>
+(function () {
+  'use strict';
+  var bar = document.getElementById('bootBar');
+  var pct = document.getElementById('bootPct');
+  var boot = document.getElementById('bootLoad');
+  var net = document.getElementById('netPill');
+  function setNet() {
+    if (!net) return;
+    net.hidden = false;
+    if (navigator.onLine) { net.textContent = 'SINCRONIZADO'; net.classList.remove('off'); }
+    else { net.textContent = 'OFFLINE'; net.classList.add('off'); }
+  }
+  window.addEventListener('online', setNet);
+  window.addEventListener('offline', setNet);
+  setNet();
+  var steps = [
+    function () { return Promise.resolve(); },
+    function () {
+      return new Promise(function (r) {
+        var n = 0;
+        var id = setInterval(function () {
+          n += 8;
+          if (bar) bar.style.width = Math.min(92, n) + '%';
+          if (pct) pct.textContent = Math.min(92, n) + '%';
+          if (n >= 92) { clearInterval(id); r(); }
+        }, 40);
+      });
+    },
+    function () {
+      // Warm particle/canvas path if game exposed QA hooks later
+      return Promise.resolve();
+    }
+  ];
+  var i = 0;
+  function next() {
+    if (i >= steps.length) {
+      if (bar) bar.style.width = '100%';
+      if (pct) pct.textContent = '100%';
+      setTimeout(function () { if (boot) boot.classList.add('hidden'); }, 180);
+      return;
+    }
+    Promise.resolve(steps[i++]()).then(next).catch(next);
+  }
+  next();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  }
+})();
+</script>
 </body>
 </html>

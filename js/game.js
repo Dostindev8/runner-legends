@@ -1,12 +1,15 @@
 /**
- * Runner Legends v3.2 — Game engine (Mega Directiva v2.0)
- * Depends: RLWorlds, RLPortal (loaded first).
+ * Runner Legends v6.0 — Game engine (Mega Directiva · Offline-first)
+ * Depends: RLWorlds, RLPortal, RLContentV6 (loaded first).
  */
 (function () {
   'use strict';
   if (!window.RLWorlds || !window.RLPortal) {
     console.error('RL: missing worlds/portal modules');
     return;
+  }
+  if (!window.RLContentV6) {
+    console.warn('RL: content-v6 missing — bosses/hub degraded');
   }
 
   const { WORLDS, getWorld, buildRuntimeConfig } = RLWorlds;
@@ -64,7 +67,10 @@
       unlocked: ['neon'], legendary: false, intro: false,
       portalHistory: [], combos: [], bestDist: 0,
       bestCombo: 0, runs: 0, portals: 0, supers: 0,
-      trail: 'neon', ownedTrails: ['neon'], achievements: {}
+      trail: 'neon', ownedTrails: ['neon'], achievements: {},
+      bossesDefeated: [], essences: {}, characters: ['kori'], activeChar: 'kori',
+      fragments: {}, fragmentRewards: {},
+      audio: { music: 0.55, sfx: 0.7, voice: 0.65 }
     };
     try {
       const raw = localStorage.getItem(SAVE_KEY);
@@ -102,11 +108,28 @@
         supers: Math.max(0, Number(d.supers) || 0),
         trail,
         ownedTrails,
-        achievements
+        achievements,
+        bossesDefeated: Array.isArray(d.bossesDefeated) ? d.bossesDefeated.map(String) : [],
+        essences: (d.essences && typeof d.essences === 'object') ? d.essences : {},
+        characters: Array.isArray(d.characters) && d.characters.length ? d.characters.map(String) : ['kori'],
+        activeChar: typeof d.activeChar === 'string' ? d.activeChar : 'kori',
+        fragments: (d.fragments && typeof d.fragments === 'object') ? d.fragments : {},
+        fragmentRewards: (d.fragmentRewards && typeof d.fragmentRewards === 'object') ? d.fragmentRewards : {},
+        audio: {
+          music: Math.min(1, Math.max(0, Number(d.audio && d.audio.music) || 0.55)),
+          sfx: Math.min(1, Math.max(0, Number(d.audio && d.audio.sfx) || 0.7)),
+          voice: Math.min(1, Math.max(0, Number(d.audio && d.audio.voice) || 0.65))
+        }
       };
     } catch (e) { return base; }
   }
   let save = loadSave();
+  if (!save.fragmentRewards) save.fragmentRewards = {};
+  if (!save.fragments) save.fragments = {};
+  if (!save.bossesDefeated) save.bossesDefeated = [];
+  if (!save.essences) save.essences = {};
+  if (!save.characters) save.characters = ['kori'];
+  if (!save.audio) save.audio = { music: 0.55, sfx: 0.7, voice: 0.65 };
   function persist() {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
   }
@@ -115,6 +138,21 @@
   function trailColor() {
     const t = TRAILS.find((x) => x.id === save.trail);
     return (t && t.col) || '#22e6ff';
+  }
+
+  function collectFragment(worldId) {
+    if (!save.fragments) save.fragments = {};
+    if (!save.fragmentRewards) save.fragmentRewards = {};
+    save.fragments[worldId] = (save.fragments[worldId] || 0) + 1;
+    const set = window.RLContentV6 && RLContentV6.FRAGMENT_SETS[worldId];
+    const n = save.fragments[worldId];
+    flashToast('FRAGMENTO · ' + n + (set ? '/' + set.need : ''));
+    if (set && n >= set.need && !save.fragmentRewards[set.reward]) {
+      save.fragmentRewards[set.reward] = true;
+      economy.coins += 30;
+      flashToast('SET COMPLETO · boost menor');
+    }
+    persist();
   }
 
   function grantAchievement(id) {
@@ -176,40 +214,87 @@
   const clock = new Clock();
 
   const audio = {
-    ctx: null, master: null,
+    ctx: null, master: null, musicG: null, sfxG: null, voiceG: null,
+    ready: false, lastPlay: Object.create(null), laughI: 0,
     init() {
       if (this.ctx) {
         if (this.ctx.state === 'suspended') this.ctx.resume();
+        this.applyVolumes();
         return;
       }
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       this.ctx = new AC();
       this.master = this.ctx.createGain();
-      this.master.gain.value = 0.55;
+      this.musicG = this.ctx.createGain();
+      this.sfxG = this.ctx.createGain();
+      this.voiceG = this.ctx.createGain();
+      this.musicG.connect(this.master);
+      this.sfxG.connect(this.master);
+      this.voiceG.connect(this.master);
       this.master.connect(this.ctx.destination);
+      this.applyVolumes();
+      this.ready = true;
     },
-    beep(freq, dur, type, gain) {
+    applyVolumes() {
+      if (!this.master) return;
+      const a = (save && save.audio) || { music: 0.55, sfx: 0.7, voice: 0.65 };
+      this.master.gain.value = 1;
+      if (this.musicG) this.musicG.gain.value = a.music;
+      if (this.sfxG) this.sfxG.gain.value = a.sfx;
+      if (this.voiceG) this.voiceG.gain.value = a.voice;
+    },
+    can(type, ms) {
+      const now = performance.now();
+      if ((this.lastPlay[type] || 0) + (ms || 100) > now) return false;
+      this.lastPlay[type] = now;
+      return true;
+    },
+    beep(freq, dur, type, gain, busName) {
       if (!this.ctx || !this.master) return;
+      const dest = busName === 'voice' ? this.voiceG : busName === 'music' ? this.musicG : this.sfxG;
       const t0 = this.ctx.currentTime;
       const o = this.ctx.createOscillator();
       const g = this.ctx.createGain();
       o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t0);
       g.gain.setValueAtTime(gain || 0.04, t0);
       g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-      o.connect(g); g.connect(this.master);
+      o.connect(g); g.connect(dest || this.sfxG);
       o.start(t0); o.stop(t0 + dur + 0.03);
     },
-    chord(freqs, dur, type, gain) {
-      for (let i = 0; i < freqs.length; i++) this.beep(freqs[i], dur, type, (gain || 0.03) * (1 - i * 0.15));
+    chord(freqs, dur, type, gain, busName) {
+      for (let i = 0; i < freqs.length; i++) this.beep(freqs[i], dur, type, (gain || 0.03) * (1 - i * 0.12), busName);
     },
-    jump() { this.beep(460, 0.07, 'triangle', 0.05); this.beep(620, 0.05, 'sine', 0.025); },
-    land() { this.beep(110, 0.07, 'sine', 0.045); },
-    coin() { this.beep(980, 0.045, 'square', 0.028); this.beep(1320, 0.06, 'sine', 0.018); },
-    hurt() { this.beep(88, 0.16, 'sawtooth', 0.05); this.beep(55, 0.2, 'triangle', 0.03); },
-    portal() { this.chord([160, 240, 320, 480], 0.4, 'sine', 0.045); },
-    superFx() { this.chord([180, 270, 360, 540], 0.35, 'sawtooth', 0.04); this.beep(720, 0.2, 'square', 0.025); },
-    combo() { this.beep(760 + Math.min(economy.combo, 20) * 18, 0.04, 'triangle', 0.03); }
+    jump() { if (!this.can('jump', 80)) return; this.beep(460, 0.07, 'triangle', 0.05); this.beep(620, 0.05, 'sine', 0.025); },
+    land() { if (!this.can('land', 90)) return; this.beep(110, 0.07, 'sine', 0.045); },
+    coin() { if (!this.can('coin', 70)) return; this.beep(980, 0.045, 'square', 0.028); this.beep(1320, 0.06, 'sine', 0.018); },
+    hurt() { if (!this.can('hurt', 120)) return; this.beep(88, 0.16, 'sawtooth', 0.05); this.beep(55, 0.2, 'triangle', 0.03); },
+    portal() { if (!this.can('portal', 200)) return; this.chord([140, 210, 280, 420], 0.45, 'sine', 0.05); this.beep(90, 0.5, 'triangle', 0.03); },
+    superFx() { if (!this.can('super', 150)) return; this.chord([180, 270, 360, 540], 0.35, 'sawtooth', 0.04); this.beep(720, 0.2, 'square', 0.025); },
+    combo() { if (!this.can('combo', 90)) return; this.beep(760 + Math.min(economy.combo, 20) * 18, 0.04, 'triangle', 0.03); },
+    specialPickup() { if (!this.can('special', 100)) return; this.chord([520, 660, 784, 990, 1180], 0.22, 'sine', 0.035); this.laugh(); },
+    memoryTone() { if (!this.can('mem', 120)) return; this.chord([330, 415, 494], 0.3, 'triangle', 0.03, 'voice'); },
+    laugh() {
+      if (!this.can('laugh', 180)) return;
+      const patterns = [[620, 740, 680, 800], [500, 640, 720], [700, 560, 780, 640], [480, 600, 720, 840]];
+      const p = patterns[this.laughI++ % patterns.length];
+      for (let i = 0; i < p.length; i++) setTimeout(() => this.beep(p[i], 0.06, 'square', 0.02, 'voice'), i * 55);
+    },
+    bossAppear() { if (!this.can('bossA', 200)) return; this.chord([80, 120, 160], 0.4, 'sawtooth', 0.045); },
+    bossHit() { if (!this.can('bossH', 90)) return; this.beep(200, 0.08, 'square', 0.04); },
+    bossDown() { if (!this.can('bossD', 200)) return; this.chord([440, 554, 659, 880], 0.5, 'triangle', 0.04); },
+    preload() {
+      this.init();
+      if (!this.ctx) return Promise.resolve();
+      return this.ctx.resume().then(() => {
+        const t0 = this.ctx.currentTime;
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        g.gain.value = 0.0001;
+        o.connect(g); g.connect(this.sfxG);
+        o.start(t0); o.stop(t0 + 0.05);
+      }).catch(() => {});
+    }
   };
   bus.on('jump', () => audio.jump());
   bus.on('land', () => audio.land());
@@ -394,13 +479,17 @@
   class Backdrop {
     constructor() {
       this.layers = [
-        { sp: 0.12, y0: 0.28, col: '#0b0630', bld: [], w: 220, h: 260 },
+        { sp: 0.08, y0: 0.22, col: '#0b0630', bld: [], w: 260, h: 280 },
+        { sp: 0.16, y0: 0.30, col: '#100840', bld: [], w: 220, h: 250 },
         { sp: 0.28, y0: 0.42, col: '#160a44', bld: [], w: 150, h: 200 },
         { sp: 0.48, y0: 0.58, col: '#241058', bld: [], w: 100, h: 150 },
-        { sp: 0.72, y0: 0.70, col: '#2e1468', bld: [], w: 70, h: 100 }
+        { sp: 0.72, y0: 0.70, col: '#2e1468', bld: [], w: 70, h: 100 },
+        { sp: 0.92, y0: 0.82, col: '#3a1a78', bld: [], w: 48, h: 70 }
       ];
       this.t = 0; this.portalFlash = 0; this.reflect = 0.35;
+      this.drift = { x: 0, y: 0 };
     }
+    rebuildLayers(view) { this.seed(view); }
     seed(view) {
       for (const L of this.layers) {
         L.bld = []; let x = -100;
@@ -419,13 +508,18 @@
           L.bld.push({ x: last.x + rand(L.w * 0.7, L.w * 1.2), h: rand(0.5, 1) * L.h, lit: Math.random() < 0.6 });
       }
     }
-    update(dt) { this.t += dt; if (this.portalFlash > 0) this.portalFlash = Math.max(0, this.portalFlash - dt); }
+    update(dt) {
+      this.t += dt;
+      if (this.portalFlash > 0) this.portalFlash = Math.max(0, this.portalFlash - dt);
+      this.drift.x = Math.sin(this.t * 0.7) * 2.4;
+      this.drift.y = Math.cos(this.t * 0.55) * 1.8;
+    }
     draw(ctx, view) {
       const pal = runtime.world.palette;
       const g = ctx.createLinearGradient(0, 0, 0, view.h);
       g.addColorStop(0, pal.sky0); g.addColorStop(0.55, pal.sky1); g.addColorStop(1, pal.sky2);
       ctx.fillStyle = g; ctx.fillRect(-80, -40, view.w + 160, view.h + 80);
-      const gx = view.w * 0.72, gy = view.h * 0.26, gr = 150;
+      const gx = view.w * 0.72 + this.drift.x, gy = view.h * 0.26 + this.drift.y, gr = 150;
       const rg = ctx.createRadialGradient(gx, gy, 10, gx, gy, gr);
       rg.addColorStop(0, pal.glow); rg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(gx, gy, gr, 0, 6.283); ctx.fill();
@@ -584,6 +678,145 @@
     }
   }
 
+  /** Boss entity — pooled singleton patterns, telegraphed attacks only (Fase 5). */
+  class BossEntity {
+    constructor() { this.clear(); }
+    clear() {
+      this.active = false; this.def = null; this.hp = 0; this.maxHp = 0;
+      this.x = 0; this.y = 0; this.w = 70; this.h = 90;
+      this.phase = 'idle'; this.t = 0; this.patIdx = 0; this.telegraph = 0;
+      this.invuln = 0; this.squadLeft = 0; this.aliveTime = 0;
+    }
+    spawn(worldId, view) {
+      const C = window.RLContentV6;
+      if (!C) return;
+      const def = C.getBoss(worldId);
+      if (!def) return;
+      if (save.bossesDefeated && save.bossesDefeated.includes(def.id)) return;
+      this.clear();
+      this.active = true; this.def = def;
+      this.maxHp = def.hp; this.hp = def.hp;
+      this.w = def.w; this.h = def.h;
+      this.x = view.w + 120; this.y = view.groundY - this.h;
+      this.phase = 'enter'; this.t = 0; this.patIdx = 0; this.aliveTime = 0;
+      this.squadLeft = def.squad || 1;
+      flashToast('JEFE · ' + def.name.toUpperCase());
+      audio.bossAppear();
+    }
+    update(dt, player, view) {
+      if (!this.active) return;
+      this.invuln = Math.max(0, this.invuln - dt);
+      this.t += dt; this.aliveTime += dt;
+      // Slide into arena
+      const targetX = view.w * 0.72;
+      if (this.phase === 'enter') {
+        this.x = lerp(this.x, targetX, clamp(dt * 2.2, 0, 1));
+        if (Math.abs(this.x - targetX) < 4) { this.phase = 'idle'; this.t = 0; }
+        return;
+      }
+      const pats = this.def.patterns;
+      const pat = pats[this.patIdx % pats.length];
+      if (this.phase === 'idle') {
+        if (this.t > 0.85) { this.phase = 'telegraph'; this.t = 0; this.telegraph = pat.telegraph; }
+      } else if (this.phase === 'telegraph') {
+        if (this.t >= pat.telegraph) { this.phase = 'attack'; this.t = 0; }
+      } else if (this.phase === 'attack') {
+        // Hurtbox during active window
+        if (this.t < pat.active) {
+          const hit = {
+            x: this.x - this.w * 0.55, y: this.y + 10,
+            w: this.w * 1.1, h: this.h * 0.85
+          };
+          if (aabb(player.rect(), hit) && player.iframe <= 0) player.hurt();
+        } else { this.phase = 'recover'; this.t = 0; }
+      } else if (this.phase === 'recover') {
+        if (this.t >= pat.recovery) {
+          this.phase = 'idle'; this.t = 0; this.patIdx++;
+        }
+      }
+      // Softlock escape: after 55s auto-weaken
+      if (this.aliveTime > 55 && this.phase !== 'dead') this.hp = Math.max(1, this.hp - dt * 0.35);
+      this.y = view.groundY - this.h + Math.sin(performance.now() * 0.003) * 4;
+    }
+    hitBySuper() {
+      if (!this.active || this.invuln > 0) return false;
+      this.hp -= 3; this.invuln = 0.45;
+      particles.burst(this.x, this.y + this.h * 0.4, 28, { col: this.def.accent, spMax: 280, up: 80 });
+      shake.add(0.45); audio.bossHit();
+      if (this.hp <= 0) { this.defeat(); return true; }
+      return false;
+    }
+    hitByStomp() {
+      if (!this.active || this.invuln > 0 || this.phase === 'telegraph') return;
+      // Safe window: stomp only during idle/recover (player agency)
+      if (this.phase !== 'idle' && this.phase !== 'recover') return;
+      this.hp -= 1; this.invuln = 0.35;
+      particles.burst(this.x, this.y, 12, { col: this.def.color, spMax: 180 });
+      audio.bossHit();
+      if (this.hp <= 0) this.defeat();
+    }
+    defeat() {
+      this.squadLeft--;
+      if (this.squadLeft > 0) {
+        this.hp = this.maxHp; this.phase = 'idle'; this.t = 0;
+        flashToast('ESCUADRÓN · ' + this.squadLeft + ' RESTANTES');
+        return;
+      }
+      this.active = false; this.phase = 'dead';
+      const def = this.def;
+      particles.burst(this.x, this.y + this.h * 0.3, 50, { col: def.accent, spMax: 420, up: 100 });
+      audio.bossDown();
+      flashToast('DERROTADO · ' + def.name.toUpperCase());
+      if (!save.bossesDefeated) save.bossesDefeated = [];
+      if (!save.bossesDefeated.includes(def.id)) save.bossesDefeated.push(def.id);
+      if (!save.essences) save.essences = {};
+      save.essences[def.essence] = (save.essences[def.essence] || 0) + 1;
+      // Unlock next world
+      const order = WORLDS.map((w) => w.id);
+      const idx = order.indexOf(def.worldId);
+      if (idx >= 0 && idx < order.length - 1) {
+        const next = order[idx + 1];
+        if (!save.unlocked.includes(next)) {
+          save.unlocked.push(next);
+          flashToast('DESBLOQUEADO · ' + getWorld(next).name);
+        }
+      }
+      if (save.unlocked.length >= 9 && !save.unlocked.includes('final')) save.unlocked.push('final');
+      persist(); refreshMenuUI();
+      economy.coins += Math.round(25 * activeDiff.reward);
+    }
+    draw(ctx) {
+      if (!this.active) return;
+      const d = this.def;
+      const warn = this.phase === 'telegraph';
+      ctx.save();
+      if (warn) {
+        ctx.globalAlpha = 0.35 + Math.sin(performance.now() * 0.02) * 0.2;
+        ctx.fillStyle = '#ff4060';
+        ctx.fillRect(this.x - this.w * 0.7, this.y - 18, this.w * 1.4, 8);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ffd24a';
+        ctx.font = '700 12px Rajdhani,sans-serif';
+        ctx.fillText('¡ATACA!', this.x - 22, this.y - 24);
+      }
+      const g = ctx.createLinearGradient(this.x - this.w / 2, this.y, this.x + this.w / 2, this.y + this.h);
+      g.addColorStop(0, d.color); g.addColorStop(1, '#0a0618');
+      ctx.fillStyle = g;
+      ctx.shadowColor = d.accent; ctx.shadowBlur = 16;
+      ctx.fillRect(this.x - this.w / 2, this.y, this.w, this.h);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = d.accent;
+      ctx.fillRect(this.x - this.w / 2 + 8, this.y + 14, this.w - 16, 10);
+      // HP bar
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(this.x - 40, this.y - 14, 80, 6);
+      ctx.fillStyle = d.accent;
+      ctx.fillRect(this.x - 40, this.y - 14, 80 * clamp(this.hp / this.maxHp, 0, 1), 6);
+      ctx.restore();
+    }
+    rect() { return { x: this.x - this.w / 2, y: this.y, w: this.w, h: this.h }; }
+  }
+
   class World {
     constructor() {
       this.crates = new ObjectPool(() => ({ x: 0, y: 0, w: 44, h: 44, alive: false, reactive: false }));
@@ -591,13 +824,18 @@
       this.coins = new ObjectPool(() => ({ x: 0, y: 0, r: 11, taken: false, ph: 0, alive: false }));
       this.holes = new ObjectPool(() => ({ x: 0, w: 0, alive: false }));
       this.portals = new ObjectPool(() => ({ x: 0, w: 40, h: 100, used: false, alive: false, bleed: [] }));
+      this.fragments = new ObjectPool(() => ({ x: 0, y: 0, r: 10, taken: false, ph: 0, alive: false }));
+      this.memories = new ObjectPool(() => ({ x: 0, y: 0, r: 12, taken: false, ph: 0, alive: false, lore: '' }));
+      this.boss = new BossEntity();
       this.reset();
     }
     reset() {
       this.crates.clear(); this.drones.clear(); this.coins.clear(); this.holes.clear(); this.portals.clear();
+      this.fragments.clear(); this.memories.clear(); this.boss.clear();
       this.speed = CFG.runStart * activeDiff.scroll * runtime.speedMul;
       this.dist = 0; this.nextGap = (view ? view.w : 800) + 80;
       this.portalSpawned = false; this.segmentDist = 0;
+      this.fragSpawned = 0; this.memSpawned = 0; this.bossArmed = false;
     }
     groundAt(x) {
       let ok = true;
@@ -636,7 +874,9 @@
     }
     update(dt, player) {
       const maxSp = CFG.runMax * activeDiff.scroll * runtime.speedMul * (runtime.heatZones ? runtime.heatSlow : 1);
-      this.speed = Math.min(maxSp, this.speed + CFG.runAccel * activeDiff.scroll * dt);
+      // Boss arena: slow slight for readability
+      const bossMul = this.boss.active ? 0.88 : 1;
+      this.speed = Math.min(maxSp * bossMul, this.speed + CFG.runAccel * activeDiff.scroll * dt);
       const dx = this.speed * dt; this.dist += dx / 26; this.segmentDist += dx / 26;
       view.lookAhead = lerp(view.lookAhead, Math.min(28, this.speed * 0.04), clamp(dt * 4, 0, 1));
       backdrop.scroll(dx); particles.scroll(dx);
@@ -646,19 +886,44 @@
       });
       this.drones.forEach((o) => { o.x -= dx; o.ph += dt * 3; });
       this.coins.forEach((o) => { o.x -= dx; o.ph += dt * 6; });
+      this.fragments.forEach((o) => { o.x -= dx; o.ph += dt * 4; });
+      this.memories.forEach((o) => { o.x -= dx; o.ph += dt * 3; });
       this.holes.forEach((o) => { o.x -= dx; });
       this.portals.forEach((o) => { o.x -= dx; });
-      if (!this.portalSpawned && this.segmentDist > CFG.portalAt) {
+      // Collectibles + boss arm (Fase 4–5)
+      const set = window.RLContentV6 && RLContentV6.FRAGMENT_SETS[runtime.worldId];
+      const need = set ? set.need : 4;
+      if (this.fragSpawned < need && this.segmentDist > 40 + this.fragSpawned * 55 && Math.random() < dt * 0.35) {
+        this.fragSpawned++;
+        this.fragments.spawn((f) => {
+          f.x = view.w + 40; f.y = view.groundY - rand(50, 120); f.taken = false; f.ph = rand(0, 6);
+        });
+      }
+      if (this.memSpawned < 2 && this.segmentDist > 90 + this.memSpawned * 100 && Math.random() < dt * 0.2) {
+        this.memSpawned++;
+        const lore = (RLContentV6.MEMORY_LORE[(save.runs + this.memSpawned) % RLContentV6.MEMORY_LORE.length]);
+        this.memories.spawn((m) => {
+          m.x = view.w + 50; m.y = view.groundY - rand(60, 130); m.taken = false; m.ph = 0; m.lore = lore;
+        });
+      }
+      if (!this.bossArmed && this.segmentDist > 140) {
+        this.bossArmed = true;
+        this.boss.spawn(runtime.worldId, view);
+      }
+      if (this.boss.active) this.boss.update(dt, player, view);
+      if (!this.portalSpawned && this.segmentDist > CFG.portalAt && !this.boss.active) {
         this.portalSpawned = true;
         this.portals.spawn((p) => {
           p.x = view.w + 60; p.w = 44; p.h = 110; p.used = false;
           p.bleed = makeBleedProps(runtime.world.bleed);
         });
       }
-      this.nextGap -= dx; if (this.nextGap <= view.w - 4) this._director();
+      this.nextGap -= dx; if (this.nextGap <= view.w - 4 && !this.boss.active) this._director();
       this.crates.forEach((o) => { if (o.x < -120) o.alive = false; }); this.crates.sweep();
       this.drones.forEach((o) => { if (o.x < -120) o.alive = false; }); this.drones.sweep();
       this.coins.forEach((o) => { if (o.x < -60) o.alive = false; }); this.coins.sweep();
+      this.fragments.forEach((o) => { if (o.x < -60) o.alive = false; }); this.fragments.sweep();
+      this.memories.forEach((o) => { if (o.x < -60) o.alive = false; }); this.memories.sweep();
       this.holes.forEach((o) => { if (o.x + o.w < -40) o.alive = false; }); this.holes.sweep();
       this.portals.forEach((o) => { if (o.x < -80) o.alive = false; }); this.portals.sweep();
       this._collisions(player);
@@ -683,6 +948,31 @@
           particles.burst(o.x, o.y, 8, { col: '#ffd24a', spMax: 140, lifeMax: 0.4, g: 300 });
         }
       });
+      this.fragments.forEach((o) => {
+        if (o.taken) return;
+        const dxp = p.x - o.x, dyp = p.y + p.h / 2 - o.y;
+        if (dxp * dxp + dyp * dyp < (o.r + 30) * (o.r + 30)) {
+          o.taken = true; o.alive = false;
+          collectFragment(runtime.worldId);
+          particles.burst(o.x, o.y, 14, { col: '#c080ff', spMax: 200, lifeMax: 0.5 });
+          audio.specialPickup();
+        }
+      });
+      this.memories.forEach((o) => {
+        if (o.taken) return;
+        const dxp = p.x - o.x, dyp = p.y + p.h / 2 - o.y;
+        if (dxp * dxp + dyp * dyp < (o.r + 30) * (o.r + 30)) {
+          o.taken = true; o.alive = false;
+          flashToast(o.lore);
+          audio.memoryTone();
+          particles.burst(o.x, o.y, 10, { col: '#9ff0ff', spMax: 160 });
+        }
+      });
+      if (this.boss.active && aabb(pr, this.boss.rect())) {
+        if (pr.y + pr.h - this.boss.y < 22 && p.vy >= 0) {
+          p.y = this.boss.y - p.h; p.vy = CFG.jumpVel * 0.55; this.boss.hitByStomp();
+        } else if (this.boss.phase === 'attack') p.hurt();
+      }
       this.portals.forEach((o) => {
         if (o.used) return;
         const gY = view.groundY;
@@ -713,30 +1003,67 @@
     return items;
   }
 
-  // —— Transition iris (shared) ——
+  // —— Transition iris (Fase 1: diagonal completa + blackout + flash bioma) ——
   const iris = {
-    active: false, phase: 'close', t: 0, dur: 0.28, cb: null,
-    start(cb) {
-      if (this.active) { this.cb = cb; return; }
-      this.active = true; this.phase = 'close'; this.t = 0; this.cb = cb;
+    active: false, phase: 'close', t: 0, dur: 0.32, cb: null,
+    onBlackout: null, flashT: 0, flashCol: null, blackoutFired: false,
+    start(cb, onBlackout) {
+      if (this.active) {
+        // Queue latest callbacks without restarting mid-wipe
+        this.cb = cb;
+        if (onBlackout) this.onBlackout = onBlackout;
+        return;
+      }
+      this.active = true; this.phase = 'close'; this.t = 0;
+      this.cb = cb; this.onBlackout = onBlackout || null;
+      this.blackoutFired = false; this.flashT = 0; this.flashCol = null;
+    },
+    beginFlash(col) {
+      this.flashCol = col || '#22e6ff';
+      this.flashT = 0.2;
     },
     update(dt) {
+      if (this.flashT > 0) this.flashT = Math.max(0, this.flashT - dt);
       if (!this.active) return;
       this.t += dt;
-      if (this.phase === 'close' && this.t >= this.dur) {
-        const fn = this.cb; this.cb = null; if (fn) fn();
-        this.phase = 'open'; this.t = 0;
-      } else if (this.phase === 'open' && this.t >= this.dur) this.active = false;
+      if (this.phase === 'close') {
+        const p = clamp(this.t / this.dur, 0, 1);
+        // Fire blackout at full cover (radius ≈ 0)
+        if (!this.blackoutFired && p >= 0.98) {
+          this.blackoutFired = true;
+          const bn = this.onBlackout; this.onBlackout = null;
+          if (bn) bn();
+          bus.emit('transition:blackout');
+        }
+        if (this.t >= this.dur) {
+          const fn = this.cb; this.cb = null; if (fn) fn();
+          this.phase = 'open'; this.t = 0;
+        }
+      } else if (this.phase === 'open' && this.t >= this.dur) {
+        this.active = false;
+        if (this._portalResume) finishPortalIris();
+      }
     },
     draw(ctx, view) {
+      // Full-viewport diagonal cover (logical space after View transform)
+      const maxR = Math.hypot(view.w, view.h);
+      const cx = view.w / 2, cy = view.h / 2;
+      if (this.flashT > 0 && this.flashCol) {
+        ctx.save();
+        ctx.globalAlpha = clamp(this.flashT / 0.2, 0, 1) * 0.55;
+        ctx.fillStyle = this.flashCol;
+        ctx.fillRect(-40, -40, view.w + 80, view.h + 80);
+        ctx.restore();
+      }
       if (!this.active) return;
       const p = clamp(this.t / this.dur, 0, 1);
-      const maxR = Math.hypot(view.w, view.h) * 0.72, cx = view.w / 2, cy = view.h / 2;
       const r = this.phase === 'close' ? lerp(maxR, 0, p) : lerp(0, maxR, p);
       ctx.save();
-      ctx.beginPath(); ctx.rect(-80, -80, view.w + 160, view.h + 160);
-      ctx.arc(cx, cy, Math.max(0.1, r), 0, 6.283, true);
-      ctx.fillStyle = '#04010c'; ctx.fill('evenodd');
+      ctx.beginPath();
+      ctx.rect(-maxR, -maxR, view.w + maxR * 2, view.h + maxR * 2);
+      ctx.arc(cx, cy, Math.max(0.05, r), 0, 6.283, true);
+      ctx.fillStyle = '#04010c';
+      ctx.fill('evenodd');
       ctx.restore();
     }
   };
@@ -745,6 +1072,7 @@
   let resolver, transit;
   let runOver = false;
   let pendingOutcome = null;
+  let keepRunOnPlay = false;
 
   const mgr = {
     state: 'BOOT', t: 0, pending: null,
@@ -769,7 +1097,10 @@
     showLayer(null); showSkip(false);
     if (s === 'LOGO' || s === 'INTRO' || s === 'TRANSIT') showSkip(true);
     else if (s === 'MENU') { showLayer('menu'); refreshMenuUI(); }
-    else if (s === 'PLAY') { startRun(false); showLayer('hud'); syncHUD(); }
+    else if (s === 'PLAY') {
+      if (keepRunOnPlay) { keepRunOnPlay = false; showLayer('hud'); syncHUD(); }
+      else { startRun(false); showLayer('hud'); syncHUD(); }
+    }
     else if (s === 'RESULTS') { showResults(); showLayer('results'); }
   }
 
@@ -797,11 +1128,23 @@
     $('weatherChip').textContent = runtime.weather.label;
   }
 
+  function applyBiome(outcome) {
+    runtime = outcome;
+    world.portalSpawned = false;
+    world.segmentDist = 0;
+    world.boss.clear();
+    weatherFX.rebuild(view);
+    backdrop.seed(view);
+    backdrop.rebuildLayers(view);
+    player.iframe = 0.6;
+    $('diffChip').textContent = activeDiff.chip;
+    $('ruleChip').textContent = runtime.rule.icon + ' ' + runtime.rule.label;
+    $('worldChip').textContent = runtime.world.name.toUpperCase();
+    $('weatherChip').textContent = runtime.weather.label;
+    iris.beginFlash(runtime.world.palette.accent);
+  }
+
   function enterPortal(originId) {
-    audio.portal();
-    shake.add(0.5); clock.freeze(0.1);
-    backdrop.portalFlash = 1;
-    particles.burst(player.x + 40, view.groundY - 50, 48, { col: '#9ff0ff', spMax: 380, up: 90, lifeMax: 0.9 });
     pendingOutcome = resolver.resolve({
       originId,
       difficultyId: activeDiff.id,
@@ -813,19 +1156,39 @@
     persist();
     evaluateAchievements(null);
     flashToast('PORTAL · ' + pendingOutcome.world.name.toUpperCase());
-    mgr.set('TRANSIT');
-    transit.start(pendingOutcome, (outcome) => {
-      runtime = outcome;
-      world.portalSpawned = false;
-      world.segmentDist = 0;
-      weatherFX.rebuild(view);
-      backdrop.seed(view);
-      player.iframe = 0.6;
-      mgr.set('PLAY');
-      flashToast(outcome.world.name.toUpperCase() + ' · ' + outcome.weather.label);
-      showLayer('hud');
-      syncHUD();
-    });
+    shake.add(0.5);
+    particles.burst(player.x + 40, view.groundY - 50, 48, { col: '#9ff0ff', spMax: 380, up: 90, lifeMax: 0.9 });
+
+    // Iris close → blackout swap → flash → open → PLAY (Fase 1 sync)
+    mgr.state = 'TRANSIT';
+    mgr.t = 0;
+    showSkip(true);
+    showLayer('hud');
+    transit.start(pendingOutcome, null);
+    iris.start(
+      () => {
+        // After open begins; finish when iris fully opens via update path
+      },
+      () => {
+        // Exact blackout frame: swap biome + portal SFX
+        audio.portal();
+        applyBiome(pendingOutcome);
+        bus.emit('transition:blackout', pendingOutcome);
+      }
+    );
+    // When iris finishes open phase, resume play (polled in update)
+    iris._portalResume = true;
+  }
+
+  function finishPortalIris() {
+    if (!iris._portalResume) return;
+    iris._portalResume = false;
+    transit.active = false;
+    keepRunOnPlay = true;
+    mgr.set('PLAY');
+    flashToast(runtime.world.name.toUpperCase() + ' · ' + runtime.weather.label);
+    showLayer('hud');
+    syncHUD();
   }
 
   function flashToast(txt) {
@@ -846,6 +1209,7 @@
     particles.burst(player.x, player.y + player.h * 0.4, 60, { col: '#ffd24a', spMax: 520, up: 120, lifeMax: 0.9 });
     const n = world.clearEnemies(); economy.buff(2, 2.0);
     economy.coins += Math.round(n * 5 * activeDiff.reward);
+    if (world.boss && world.boss.active) world.boss.hitBySuper();
     save.supers = (save.supers || 0) + 1; persist();
     evaluateAchievements(null);
     flashToast('¡EXPLOSIÓN ESTELAR!');
@@ -871,17 +1235,10 @@
       const btn = document.querySelector('[data-diff="legendary"]');
       if (btn) { btn.disabled = false; btn.title = 'Desbloqueado'; }
     }
-    // Unlock next world by distance milestones
+    // Unlock next world primarily via boss defeat (Fase 5). Stars still grant XP bonus only.
     const order = WORLDS.map((w) => w.id);
-    const idx = order.indexOf(runtime.worldId);
-    if (stars >= 2 && idx >= 0 && idx < order.length - 1) {
-      const next = order[idx + 1];
-      if (!save.unlocked.includes(next) && next !== 'final') {
-        save.unlocked.push(next);
-        flashToast('DESBLOQUEADO · ' + getWorld(next).name);
-      }
-    }
-    if (save.unlocked.length >= 9 && !save.unlocked.includes('final')) {
+    void order; void stars;
+    if (save.unlocked.length >= 9 && !save.unlocked.includes('final') && (save.bossesDefeated || []).length >= 9) {
       save.unlocked.push('final');
     }
     persist();
@@ -970,7 +1327,35 @@
     world.portals.forEach((o) => {
       drawPortalEntity(ctx, o, gY);
     });
-    // Near-miss spark when clearing crates closely
+    world.fragments.forEach((o) => {
+      if (o.taken) return;
+      const bob = Math.sin(o.ph) * 4;
+      ctx.save();
+      ctx.translate(o.x, o.y + bob);
+      ctx.rotate(o.ph * 0.2);
+      ctx.shadowColor = '#c080ff'; ctx.shadowBlur = 12;
+      ctx.fillStyle = '#e0b0ff';
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+        const r = i % 2 ? o.r * 0.45 : o.r;
+        const x = Math.cos(a) * r, y = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    });
+    world.memories.forEach((o) => {
+      if (o.taken) return;
+      ctx.shadowColor = '#9ff0ff'; ctx.shadowBlur = 10;
+      ctx.fillStyle = 'rgba(160,230,255,0.85)';
+      ctx.fillRect(o.x - 8, o.y - 10 + Math.sin(o.ph) * 3, 16, 20);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#041018';
+      ctx.fillRect(o.x - 5, o.y - 5, 10, 2);
+      ctx.fillRect(o.x - 5, o.y + 1, 10, 2);
+    });
+    if (world.boss) world.boss.draw(ctx);
     void t;
   }
 
@@ -1154,7 +1539,7 @@
       input.consumeJump(); input.consumeRelease(); input.consumeSuper();
       if (mgr.state === 'BOOT' && mgr.t > 0.2) mgr.set('LOGO');
       if (mgr.state === 'LOGO' && mgr.t > 1.5) mgr.go(save.intro ? 'MENU' : 'INTRO');
-      if (mgr.state === 'INTRO' && mgr.t > 8) { save.intro = true; persist(); mgr.go('MENU'); }
+      if (mgr.state === 'INTRO' && mgr.t > 24) { save.intro = true; persist(); mgr.go('MENU'); }
     }
   }
 
@@ -1178,25 +1563,79 @@
       if (mgr.state === 'INTRO') drawIntro(ctx, view);
     }
     iris.draw(ctx, view);
+    // Dynamic vignette (Fase 7) — stronger at high speed
+    if (mgr.state === 'PLAY' && world) {
+      const vig = 0.18 + Math.min(0.28, (world.speed / 700) * 0.35);
+      const vg = ctx.createRadialGradient(view.w / 2, view.h / 2, view.h * 0.25, view.w / 2, view.h / 2, Math.hypot(view.w, view.h) * 0.65);
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, `rgba(0,0,0,${vig})`);
+      ctx.fillStyle = vg;
+      ctx.fillRect(-20, -20, view.w + 40, view.h + 40);
+    }
   }
 
   const introScenes = [
-    { title: 'DISTRITO NEÓN', body: 'Calles mojadas. Neón. Velocidad. El portal nunca lleva al mismo lugar dos veces.' },
-    { title: 'KORI VOLTZ', body: 'Canaliza ki en cada salto. Explosión Estelar lista.' },
-    { title: 'PORTALES VIVOS', body: 'Sangrado dimensional: otros mundos se filtran antes de cruzar.' },
-    { title: 'REGLAS ÚNICAS', body: 'Cada dimensión impone su física: hielo, gravedad, arena, fractales.' }
+    { title: 'DESPEGUE', body: 'Kori abandona la plataforma orbital. El Distrito late bajo un cielo de neón.', phase: 'launch' },
+    { title: 'CAMPO DE ASTEROIDES', body: 'Rocas de código flotante. Esquiva. Acelera. No mires atrás.', phase: 'asteroids' },
+    { title: 'NEBULOSA', body: 'Constelaciones púrpura y cian escriben rutas entre dimensiones.', phase: 'nebula' },
+    { title: 'PORTAL DIMENSIONAL', body: 'Un anillo vivo se abre. El sangrado dimensional ya filtra otros mundos.', phase: 'portal' },
+    { title: 'AGUJERO NEGRO', body: 'Todo colapsa al centro. El menú nace del mismo silencio.', phase: 'blackhole' }
   ];
   function drawIntro(ctx, v) {
-    const scene = Math.min(introScenes.length - 1, Math.floor(mgr.t / 2));
+    const total = 24;
+    const t = mgr.t;
+    const scene = Math.min(introScenes.length - 1, Math.floor(t / (total / introScenes.length)));
     const s = introScenes[scene];
-    drawMenuBg(ctx, v);
+    const local = (t % (total / introScenes.length)) / (total / introScenes.length);
+    // Starfield / nebula particles
+    ctx.fillStyle = '#04010c';
+    ctx.fillRect(0, 0, v.w, v.h);
+    for (let i = 0; i < 60; i++) {
+      const x = ((i * 97 + t * (20 + (i % 5) * 12)) % (v.w + 40)) - 20;
+      const y = (i * 53 + Math.sin(t + i) * 8) % v.h;
+      ctx.globalAlpha = 0.35 + (i % 3) * 0.15;
+      ctx.fillStyle = i % 4 === 0 ? '#ff2bd6' : i % 3 === 0 ? '#22e6ff' : '#a78bfa';
+      ctx.fillRect(x, y, i % 5 === 0 ? 3 : 1.5, i % 5 === 0 ? 3 : 1.5);
+    }
+    ctx.globalAlpha = 1;
+    if (s.phase === 'asteroids') {
+      for (let i = 0; i < 8; i++) {
+        const x = v.w - ((t * 80 + i * 90) % (v.w + 100));
+        const y = 80 + (i * 47) % (v.h - 120);
+        ctx.fillStyle = '#3a2a60';
+        ctx.beginPath(); ctx.arc(x, y, 10 + (i % 3) * 6, 0, 6.283); ctx.fill();
+      }
+    }
+    if (s.phase === 'portal' || s.phase === 'blackhole') {
+      const cx = v.w / 2, cy = v.h * 0.45;
+      const r = s.phase === 'blackhole' ? lerp(40, 2, local) : 30 + Math.sin(t * 3) * 6;
+      const grd = ctx.createRadialGradient(cx, cy, 2, cx, cy, r * 4);
+      grd.addColorStop(0, 'rgba(255,255,255,0.9)');
+      grd.addColorStop(0.4, 'rgba(120,40,255,0.5)');
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, r * 4, 0, 6.283); ctx.fill();
+      if (s.phase === 'blackhole') {
+        // Canvas scale collapse toward center
+        ctx.save();
+        const sc = lerp(1, 0.15, local * local);
+        ctx.translate(cx, cy); ctx.scale(sc, sc); ctx.rotate(local * 2.5); ctx.translate(-cx, -cy);
+        ctx.globalAlpha = 1 - local * 0.85;
+        ctx.fillStyle = '#12043a';
+        ctx.fillRect(cx - 80, cy - 50, 160, 100);
+        ctx.restore();
+        ctx.fillStyle = `rgba(0,0,0,${local * 0.85})`;
+        ctx.fillRect(0, 0, v.w, v.h);
+      }
+    }
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
-    ctx.font = '900 ' + Math.round(v.h * 0.06) + 'px Orbitron,sans-serif';
-    ctx.fillText(s.title, v.w / 2, v.h * 0.28);
+    ctx.font = '900 ' + Math.round(v.h * 0.055) + 'px Orbitron,sans-serif';
+    ctx.globalAlpha = clamp(1 - Math.abs(local - 0.5) * 0.4, 0.55, 1);
+    ctx.fillText(s.title, v.w / 2, v.h * 0.72);
     ctx.fillStyle = '#cfe9ff';
-    ctx.font = '600 16px Rajdhani,sans-serif';
-    wrapText(ctx, s.body, v.w / 2, v.h * 0.4, v.w * 0.75, 22);
+    ctx.font = '600 15px Rajdhani,sans-serif';
+    wrapText(ctx, s.body, v.w / 2, v.h * 0.8, v.w * 0.78, 20);
+    ctx.globalAlpha = 1;
     ctx.textAlign = 'start';
   }
   function wrapText(ctx, text, x, y, maxW, lh) {
@@ -1317,22 +1756,63 @@
         <p class="meta">Conecta tournament-service cuando el backend esté online. Cero rankings falsos.</p></div>`;
     } else if (which === 'settings') {
       title.textContent = 'Ajustes';
+      const a = save.audio || { music: 0.55, sfx: 0.7, voice: 0.65 };
       body.innerHTML = `<div class="info-card">
         <label>Nombre <input id="nameInput" maxlength="16" value="${esc(save.name)}" /></label>
         <button type="button" class="btn ghost" id="saveName">Guardar</button>
         <button type="button" class="btn ghost" id="resetIntro">Ver intro de nuevo</button>
-        <p class="meta">Audio: WebAudio on-demand · Master preparado</p></div>`;
+        <p class="meta" style="margin-top:10px">Volumen</p>
+        <label>Música <input type="range" id="volMusic" min="0" max="1" step="0.05" value="${a.music}" /></label>
+        <label>SFX <input type="range" id="volSfx" min="0" max="1" step="0.05" value="${a.sfx}" /></label>
+        <label>Voces / Risas <input type="range" id="volVoice" min="0" max="1" step="0.05" value="${a.voice}" /></label>
+        <p class="meta">Audio sintético precargado · Offline-first PWA</p></div>`;
       setTimeout(() => {
         $('saveName')?.addEventListener('click', () => {
           save.name = sanitizeName($('nameInput').value); persist(); refreshMenuUI();
         });
         $('resetIntro')?.addEventListener('click', () => { save.intro = false; persist(); mgr.go('INTRO'); });
+        const bindVol = (id, key) => {
+          $(id)?.addEventListener('input', (e) => {
+            save.audio[key] = Number(e.target.value);
+            persist(); audio.applyVolumes();
+          });
+        };
+        bindVol('volMusic', 'music'); bindVol('volSfx', 'sfx'); bindVol('volVoice', 'voice');
       }, 0);
     } else if (which === 'roster') {
-      title.textContent = 'Roster';
-      body.innerHTML = `<div class="info-card"><h3>Kori Voltz</h3>
-        <p>Guerrero de energía. Stats afectan salto/velocidad/combo reales.</p>
-        <p class="meta">VEL · SALTO · COMBO — conectados al feel. Más personajes: arquitectura lista.</p></div>`;
+      title.textContent = 'Hub de Personajes';
+      const chars = (window.RLContentV6 && RLContentV6.CHARACTERS) || [];
+      body.innerHTML = `<div class="info-card"><p class="meta">Canjea Esencias de jefes · Grid responsive</p>
+        <div class="char-hub">` + chars.map((c) => {
+        const owned = (save.characters || []).includes(c.id);
+        const active = save.activeChar === c.id;
+        const haveEss = c.essence ? (save.essences[c.essence] || 0) >= c.price : true;
+        const btn = active ? 'Activo' : owned ? 'Seleccionar' : haveEss ? 'Canjear' : 'Bloqueado';
+        return `<div class="char-card-v6${owned ? '' : ' lock'}">
+          <h3>${esc(c.name)}</h3>
+          <p>${esc(c.blurb)}</p>
+          <p class="meta">${esc(c.skill)}${c.essence ? ' · ' + esc(c.essence) : ''}</p>
+          <button type="button" class="btn ghost" data-char="${esc(c.id)}" ${(!owned && !haveEss) || active ? 'disabled' : ''}>${btn}</button>
+        </div>`;
+      }).join('') + '</div></div>';
+      setTimeout(() => {
+        body.querySelectorAll('[data-char]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.char;
+            const c = RLContentV6.getCharacter(id);
+            if (!c) return;
+            if (!(save.characters || []).includes(id)) {
+              if (c.essence) {
+                if ((save.essences[c.essence] || 0) < c.price) { flashToast('Esencia insuficiente'); return; }
+                save.essences[c.essence] -= c.price;
+              }
+              save.characters.push(id);
+            }
+            save.activeChar = id;
+            persist(); openPanel('roster'); flashToast('ACTIVO · ' + c.name);
+          });
+        });
+      }, 0);
     }
   }
 
@@ -1368,7 +1848,17 @@
     $('skipBtn').addEventListener('click', () => {
       if (mgr.state === 'INTRO') { save.intro = true; persist(); mgr.go('MENU'); }
       else if (mgr.state === 'LOGO') mgr.go(save.intro ? 'MENU' : 'INTRO');
-      else if (mgr.state === 'TRANSIT') transit.skip();
+      else if (mgr.state === 'TRANSIT') {
+        if (iris._portalResume) {
+          if (!iris.blackoutFired && pendingOutcome) {
+            applyBiome(pendingOutcome);
+            iris.blackoutFired = true;
+            bus.emit('transition:blackout', pendingOutcome);
+          }
+          iris.active = false;
+          finishPortalIris();
+        } else transit.skip();
+      }
     });
     $('panelClose').addEventListener('click', () => { showLayer('menu'); });
 
