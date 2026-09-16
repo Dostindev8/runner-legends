@@ -1,4 +1,4 @@
-# Runner Legends — Distrito Neón (Web Slice v3.1)
+# Runner Legends — Distrito Neón (Web Slice Ω.3)
 
 > IP 100% original de **Logic Code Spot**. Ningún personaje, marca o persona real es usado ni imitado.
 
@@ -25,8 +25,12 @@ python -m http.server 8188
 **Link demo local (si el servidor está activo):** [http://localhost:8188/index.html](http://localhost:8188/index.html)
 
 **Controles (una sola mano):** toca/clic o `Espacio` = saltar (mantener = salto alto,
-*variable jump*). Botón **SÚPER** o tecla `E` = Explosión Estelar (cuando la barra está llena).
+*variable jump*). Botón **SÚPER** o tecla `E` = abre el selector de poderes (pausa real)
+cuando la barra está llena; elige un poder. Botón **Personaje** en menú = roster (11).
+Antes de cada run aparece un mensaje al espectador firmado por Dostin Santana.
 Selector de dificultad en menú (Normal / Difícil / Experto / Legendario).
+
+Docs: [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) · [TESTING.md](TESTING.md).
 
 ## Qué implementa (mapa GDD → código)
 
