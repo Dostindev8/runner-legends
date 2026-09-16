@@ -55,6 +55,20 @@
   let runtime = buildRuntimeConfig('neon', 'clear_night', 'extreme_speed', 'normal');
   let preferredOrigin = 'neon';
 
+  /** Ω.3 — power module facade. Null-object fallback keeps the core playable
+   *  if js/power-system.js is disabled (EXTEND-NEVER-OVERWRITE audit hook). */
+  const NO_POWERS = {
+    init() {}, reset() {}, update() {}, openSelector() { return false; },
+    isPaused() { return false; }, freeFlight() { return false; }, jumpLocked() { return false; },
+    worldSpeedMul() { return 1; }, alphaMul() { return 1; }, label() { return ''; }, active: null
+  };
+  const powers = window.RLPowers || NO_POWERS;
+
+  /** Physically reachable gap floor: air time of a single jump + reaction margin. */
+  const JUMP_AIR_TIME = (2 * Math.abs(CFG.jumpVel)) / CFG.gravity; // ≈0.77s
+  const REACTION_MARGIN = 0.35;
+  function minSafeGap(speed) { return speed * (JUMP_AIR_TIME + REACTION_MARGIN); }
+
   const SAVE_KEY = 'rl_save_v2';
   const WORLD_IDS = WORLDS.map((w) => w.id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -69,7 +83,7 @@
       bestCombo: 0, runs: 0, portals: 0, supers: 0,
       trail: 'neon', ownedTrails: ['neon'], achievements: {},
       bossesDefeated: [], essences: {}, characters: ['kori'], activeChar: 'kori',
-      fragments: {}, fragmentRewards: {},
+      fragments: {}, fragmentRewards: {}, powersSeen: [],
       audio: { music: 0.55, sfx: 0.7, voice: 0.65 }
     };
     try {
@@ -115,6 +129,7 @@
         activeChar: typeof d.activeChar === 'string' ? d.activeChar : 'kori',
         fragments: (d.fragments && typeof d.fragments === 'object') ? d.fragments : {},
         fragmentRewards: (d.fragmentRewards && typeof d.fragmentRewards === 'object') ? d.fragmentRewards : {},
+        powersSeen: Array.isArray(d.powersSeen) ? d.powersSeen.map(String).slice(0, 32) : [],
         audio: {
           music: Math.min(1, Math.max(0, Number(d.audio && d.audio.music) || 0.55)),
           sfx: Math.min(1, Math.max(0, Number(d.audio && d.audio.sfx) || 0.7)),
@@ -580,8 +595,9 @@
       const coyote = activeDiff.coyote * (runtime.reactionWindow || 1);
       const buffer = activeDiff.buffer;
       const grav = CFG.gravity * runtime.gravityMul;
-      const maxJumps = (runtime.floatControl || runtime.localGravityFlip) ? 2 : 1;
-      if (input.consumeJump()) this.bufferT = buffer;
+      let maxJumps = (runtime.floatControl || runtime.localGravityFlip) ? 2 : 1;
+      if (powers.freeFlight()) maxJumps = 99;
+      if (input.consumeJump() && !powers.jumpLocked()) this.bufferT = buffer;
       this.bufferT = Math.max(0, this.bufferT - dt);
       const supported = world.groundAt(this.x) && this.feetY >= gY - 1.5;
       if (supported && this.vy >= 0) {
@@ -852,10 +868,13 @@
     _director() {
       const gY = view.groundY; const dens = activeDiff.density; const r = Math.random();
       const gapMul = 1 / Math.sqrt(dens);
+      // Ω.3: +40% base spacing, floored by what is physically jumpable at this speed.
+      const gap = (min, max, extra) =>
+        view.w + 40 + (extra || 0) + Math.max(rand(min, max) * gapMul * 1.4, minSafeGap(this.speed));
       if (r < 0.28) {
         const w = rand(90, 160); this.holes.spawn((h) => { h.x = view.w + 40; h.w = w; });
         this._spawnCoinArc(view.w + 40 + w * 0.2, gY - 30, 4);
-        this.nextGap = view.w + 40 + w + rand(240, 360) * gapMul;
+        this.nextGap = gap(240, 360, w);
       } else if (r < 0.55) {
         const h = rand(34, 58);
         this.crates.spawn((c) => {
@@ -863,19 +882,19 @@
           c.reactive = !!runtime.reactiveObstacles;
         });
         this._spawnCoinArc(view.w + 18, gY - h - 70, 5);
-        this.nextGap = view.w + 40 + rand(240, 340) * gapMul;
+        this.nextGap = gap(240, 340);
       } else if (r < 0.78) {
         this.drones.spawn((d) => { d.x = view.w + 40; d.y = gY - rand(70, 140); d.ph = rand(0, 6); });
-        this.nextGap = view.w + 40 + rand(230, 320) * gapMul;
+        this.nextGap = gap(230, 320);
       } else {
         this._spawnCoinArc(view.w + 30, gY - rand(40, 90), 7);
-        this.nextGap = view.w + 40 + rand(200, 280) * gapMul;
+        this.nextGap = gap(200, 280);
       }
     }
     update(dt, player) {
       const maxSp = CFG.runMax * activeDiff.scroll * runtime.speedMul * (runtime.heatZones ? runtime.heatSlow : 1);
       // Boss arena: slow slight for readability
-      const bossMul = this.boss.active ? 0.88 : 1;
+      const bossMul = (this.boss.active ? 0.88 : 1) * powers.worldSpeedMul();
       this.speed = Math.min(maxSp * bossMul, this.speed + CFG.runAccel * activeDiff.scroll * dt);
       const dx = this.speed * dt; this.dist += dx / 26; this.segmentDist += dx / 26;
       view.lookAhead = lerp(view.lookAhead, Math.min(28, this.speed * 0.04), clamp(dt * 4, 0, 1));
@@ -1122,6 +1141,7 @@
     backdrop.seed(view);
     backdrop.portalFlash = 0; view.lookAhead = 0;
     world.nextGap = view.w + 80; runOver = false;
+    powers.reset();
     $('diffChip').textContent = activeDiff.chip;
     $('ruleChip').textContent = runtime.rule.icon + ' ' + runtime.rule.label;
     $('worldChip').textContent = runtime.world.name.toUpperCase();
@@ -1202,8 +1222,16 @@
     });
   }
 
+  /** Ω.3: SÚPER opens the power selector (real pause). Falls back to the
+   *  classic instant blast when the module is absent or already busy. */
   function fireSuper() {
     if (economy.super < 1 || player.dead) return;
+    if (powers.active) { flashToast(powers.label()); return; }
+    if (powers.openSelector()) return;
+    classicSuper();
+  }
+
+  function classicSuper() {
     economy.super = 0; shake.add(1); clock.freeze(0.09); audio.superFx();
     player.superGlow = 1.4;
     particles.burst(player.x, player.y + player.h * 0.4, 60, { col: '#ffd24a', spMax: 520, up: 120, lifeMax: 0.9 });
@@ -1214,6 +1242,31 @@
     evaluateAchievements(null);
     flashToast('¡EXPLOSIÓN ESTELAR!');
   }
+
+  /** Ω.3 — visual/gameplay callbacks handed to the power module. */
+  const powerFX = {
+    toast: (txt) => flashToast(txt),
+    burst: (col) => {
+      shake.add(0.8); audio.superFx(); player.superGlow = 1.4;
+      particles.burst(player.x, player.y + player.h * 0.4, 48, { col, spMax: 460, up: 120, lifeMax: 0.85 });
+    },
+    trail: (col) => particles.burst(player.x - 12, player.y + player.h * 0.6, 3, { col, spMax: 90, lifeMax: 0.4, g: 120 }),
+    sfx: () => audio.superFx(),
+    clearNearest: (col) => {
+      let best = null, bestDx = Infinity;
+      const scan = (pool) => pool.forEach((o) => {
+        const dx = o.x - player.x;
+        if (dx > -20 && dx < bestDx) { bestDx = dx; best = o; }
+      });
+      scan(world.drones); scan(world.crates);
+      if (!best) { particles.burst(view.w * 0.7, view.groundY - 60, 18, { col, spMax: 300, lifeMax: 0.5 }); return; }
+      best.alive = false; world.drones.sweep(); world.crates.sweep();
+      particles.burst(best.x, best.y, 30, { col, spMax: 400, lifeMax: 0.7 });
+      economy.coins += Math.round(5 * activeDiff.reward);
+      shake.add(0.4);
+      if (world.boss && world.boss.active) world.boss.hitBySuper();
+    }
+  };
 
   function showResults() {
     const d = Math.round(world.dist), c = economy.coins, mc = economy.maxCombo;
@@ -1269,6 +1322,10 @@
         cc.hidden = false;
         cc.textContent = 'COMBO ×' + economy.combo;
       } else cc.hidden = true;
+    }
+    const pc = $('powerChip');
+    if (pc) {
+      if (powers.active) { pc.hidden = false; pc.textContent = powers.label(); } else pc.hidden = true;
     }
   }
 
@@ -1405,7 +1462,8 @@
       ctx.globalAlpha = 1;
     }
     ctx.translate(cx, top + h / 2 + bob);
-    if (p.iframe > 0 && Math.floor(performance.now() / 60) % 2 === 0) ctx.globalAlpha = 0.45;
+    ctx.globalAlpha = powers.alphaMul();
+    if (p.iframe > 0 && Math.floor(performance.now() / 60) % 2 === 0) ctx.globalAlpha *= 0.45;
     if (p.superGlow > 0 || (economy && economy.buffT > 0)) {
       ctx.shadowColor = '#ffd24a'; ctx.shadowBlur = 18;
     } else {
@@ -1520,7 +1578,9 @@
 
   function update(raw, dt) {
     iris.update(raw); shake.update(raw); mgr.t += raw;
+    if (powers.isPaused()) { input.consumeJump(); input.consumeRelease(); input.consumeSuper(); return; }
     if (mgr.state === 'PLAY') {
+      powers.update(raw);
       if (input.consumeSuper()) fireSuper();
       if (!player.dead) {
         world.update(dt, player);
@@ -1656,7 +1716,28 @@
     $('diffHint').textContent = `Coyote ${Math.round(activeDiff.coyote * 1000)}ms · recompensa ×${activeDiff.reward.toFixed(2)} · portal ±extremo`;
   }
 
+  /** Ω.3 — announce powers whose existing-save milestone was just met. */
+  function announceNewPowers() {
+    if (!powers.unlockedIds) return;
+    const ids = powers.unlockedIds(save);
+    if (!Array.isArray(save.powersSeen)) save.powersSeen = [];
+    const fresh = ids.filter((id) => save.powersSeen.indexOf(id) === -1);
+    if (!fresh.length) return;
+    save.powersSeen = ids.slice();
+    persist();
+    if (save.runs > 0) {
+      const p = RLContentV6.POWERS.find((x) => x.id === fresh[0]);
+      if (p) flashToast('NUEVO PODER · ' + p.name.toUpperCase());
+    }
+  }
+
   function refreshMenuUI() {
+    announceNewPowers();
+    const cb = $('charBtn');
+    if (cb) {
+      const ch = RLContentV6.getCharacter(save.activeChar);
+      cb.textContent = ch ? ch.name : 'Personaje';
+    }
     $('profileName').textContent = sanitizeName(save.name);
     $('profileLevel').textContent = 'Nivel ' + save.level;
     $('profileCoins').textContent = save.coins.toLocaleString();
@@ -1830,6 +1911,15 @@
     });
     transit = new WorldTransitionManager();
 
+    powers.init({
+      getSave: () => save,
+      getEconomy: () => economy,
+      getPlayer: () => player,
+      getRuntime: () => runtime,
+      fx: powerFX,
+      persist
+    });
+
     if (save.legendary) {
       const btn = document.querySelector('[data-diff="legendary"]');
       if (btn) { btn.disabled = false; }
@@ -1841,7 +1931,11 @@
     setDifficulty('normal');
     refreshMenuUI();
 
-    $('playBtn').addEventListener('click', () => { audio.init(); mgr.go('PLAY'); });
+    $('playBtn').addEventListener('click', () => {
+      audio.init();
+      if (window.RLSpectator) RLSpectator.show(() => mgr.go('PLAY'));
+      else mgr.go('PLAY');
+    });
     $('againBtn').addEventListener('click', () => mgr.go('PLAY'));
     $('menuBtn').addEventListener('click', () => mgr.go('MENU'));
     $('introBtn').addEventListener('click', () => { audio.init(); save.intro = false; mgr.go('INTRO'); });

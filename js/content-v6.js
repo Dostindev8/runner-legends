@@ -183,11 +183,80 @@
     'La Explosión Estelar es un pacto, no un truco.'
   ];
 
+  /** Spectator hype lines — always signed (Ω.3 §3). */
+  const HYPE_MESSAGES = [
+    'No lo intentes en casa. — Dostin Santana',
+    'El Distrito no perdona a los débiles. — Dostin Santana',
+    'Sincroniza o muere. — Dostin Santana',
+    'La velocidad extrema no es un consejo, es una advertencia. — Dostin Santana',
+    'Cada portal cobra su precio. — Dostin Santana',
+    'Si dudas en el salto, ya perdiste. — Dostin Santana',
+    'El neón ilumina, no protege. — Dostin Santana',
+    'Los jefes recuerdan tu último intento. — Dostin Santana',
+    'La Explosión Estelar no se improvisa. — Dostin Santana',
+    'Corre como si el Distrito te debiera algo. — Dostin Santana',
+    'Nadie llega al Distrito Final por suerte. — Dostin Santana',
+    'Tu combo vale más que tu distancia. — Dostin Santana',
+    'La lluvia borra huellas, no errores. — Dostin Santana',
+    'Un poder mal usado es un poder perdido. — Dostin Santana',
+    'Aquí se compite contra la física, no contra otros. — Dostin Santana'
+  ];
+
+  /** Power catalog — 100% original IP (Ω.3 §6). */
+  const POWERS = [
+    {
+      id: 'flight', name: 'Vuelo', icon: '▲', duration: 7, col: '#22e6ff',
+      desc: 'Gravedad cero controlada.', unlock: { type: 'base' }
+    },
+    {
+      id: 'ascended', name: 'Modo Ascendido', icon: '✦', duration: 8, col: '#ffd24a',
+      desc: 'Velocidad +15% e iframes extendidos.', unlock: { type: 'characters', n: 2 }
+    },
+    {
+      id: 'voltz_sphere', name: 'Esfera Voltz', icon: '◉', duration: 0.4, col: '#7fd0ff',
+      desc: 'Carga y limpia el obstáculo más cercano.', unlock: { type: 'bosses', n: 1 }
+    },
+    {
+      id: 'double_laser', name: 'Doble Láser', icon: '⇉', duration: 0.6, col: '#ff2bd6',
+      desc: 'Dos disparos que aturden enemigos.', unlock: { type: 'worlds', n: 3 }
+    },
+    {
+      id: 'dance', name: 'Baile', icon: '♪', duration: 1.2, col: '#c080ff',
+      desc: 'Celebración cosmética. Bloquea salto.', unlock: { type: 'achievement', id: 'dist_400' }
+    },
+    {
+      id: 'invincible', name: 'Invencibilidad', icon: '♥', duration: 10, col: '#ff5a7a',
+      desc: 'Inmune con tema musical corto.', unlock: { type: 'worlds', n: 4 }
+    },
+    {
+      id: 'shadow', name: 'Modo Sombra', icon: '◐', duration: 8, col: '#8fa8c8',
+      desc: 'Silueta translúcida, humo neón.', unlock: { type: 'worlds', n: 5 }
+    },
+    {
+      id: 'bullet_time', name: 'Bullet-Time', icon: '◷', duration: 5, col: '#40ffe0',
+      desc: 'El mundo se ralentiza, tú no.', unlock: { type: 'worlds', n: 6 }
+    }
+  ];
+
+  /** Pure predicate over the existing save — no parallel quest system. */
+  function isPowerUnlocked(power, save) {
+    const u = power.unlock || { type: 'base' };
+    if (u.type === 'base') return true;
+    if (u.type === 'bosses') return (save.bossesDefeated || []).length >= u.n;
+    if (u.type === 'worlds') return (save.unlocked || []).length >= u.n;
+    if (u.type === 'characters') return (save.characters || []).length >= u.n;
+    if (u.type === 'achievement') return !!(save.achievements || {})[u.id];
+    return false;
+  }
+
   global.RLContentV6 = {
     BOSSES,
     CHARACTERS,
     FRAGMENT_SETS,
     MEMORY_LORE,
+    HYPE_MESSAGES,
+    POWERS,
+    isPowerUnlocked,
     getBoss(worldId) { return BOSSES[worldId] || null; },
     getCharacter(id) { return CHARACTERS.find((c) => c.id === id) || CHARACTERS[0]; }
   };
