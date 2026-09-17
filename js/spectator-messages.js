@@ -1,58 +1,79 @@
 /**
- * Runner Legends Ω.3 — Spectator hype overlay.
- * Offline-first: pool embedded, no fetch. Anti-repetition within session.
+ * Runner Legends v7 — Pre-match voice card (skip after 1.2s, aria-live).
  */
 (function (global) {
   'use strict';
-
-  const FALLBACK = ['El Distrito no perdona a los débiles. — Dostin Santana'];
-  const recent = [];
   let timer = 0;
+  let shownAt = 0;
+  let onDone = null;
+  let sessionTry = 0;
+  let losses = 0;
 
-  function pool() {
-    const C = global.RLContentV6;
-    return (C && Array.isArray(C.HYPE_MESSAGES) && C.HYPE_MESSAGES.length) ? C.HYPE_MESSAGES : FALLBACK;
-  }
+  function noteLoss() { losses++; }
+  function noteWin() { losses = 0; }
 
-  function pick() {
-    const all = pool();
-    const fresh = all.filter((m) => recent.indexOf(m) === -1);
-    const src = fresh.length ? fresh : all;
-    const msg = src[Math.floor(Math.random() * src.length)];
-    recent.push(msg);
-    while (recent.length > Math.max(4, Math.floor(all.length / 2))) recent.shift();
-    return msg;
-  }
-
-  /**
-   * Show the overlay, then run onDone after the cinematic beat.
-   * @param {function} onDone
-   * @param {number} [ms] 2500–3500
-   */
-  function show(onDone, ms) {
+  function renderCard(msg) {
     const el = document.getElementById('spectatorMsg');
-    const dur = Math.min(3500, Math.max(2500, ms || 2900));
-    if (!el) { if (onDone) onDone(); return; }
-    el.textContent = pick();
+    if (!el) return null;
+    el.textContent = '';
+    const card = document.createElement('article');
+    card.className = 'spec-card';
+    const badge = document.createElement('span');
+    badge.className = 'spec-badge';
+    badge.textContent = msg.category || 'MOTIVACION';
+    badge.style.background = (global.RLMessages && RLMessages.COL[msg.category]) || '#22d3ee';
+    const p = document.createElement('p');
+    p.className = 'spec-text';
+    p.textContent = msg.text || msg;
+    const cite = document.createElement('cite');
+    cite.className = 'spec-sign';
+    cite.textContent = '— Dostin Santana';
+    const skip = document.createElement('button');
+    skip.type = 'button';
+    skip.className = 'spec-skip';
+    skip.textContent = 'Saltar ›';
+    skip.addEventListener('click', () => { if (performance.now() - shownAt >= 1200) finish(); });
+    card.appendChild(badge); card.appendChild(p); card.appendChild(cite); card.appendChild(skip);
+    el.appendChild(card);
+    return el;
+  }
+
+  function finish() {
+    const el = document.getElementById('spectatorMsg');
+    clearTimeout(timer);
+    if (el) { el.classList.remove('on'); el.classList.add('hidden'); el.textContent = ''; }
+    const cb = onDone; onDone = null;
+    if (cb) cb();
+  }
+
+  function pickMsg(save) {
+    if (global.RLMessages && RLMessages.pick) {
+      return RLMessages.pick(save && save.activeChar, { sessionTry: sessionTry, losses: losses });
+    }
+    const C = global.RLContentV6;
+    const pool = (C && C.HYPE_MESSAGES) || ['El Distrito no perdona a los débiles. — Dostin Santana'];
+    return { text: pool[Math.floor(Math.random() * pool.length)], category: 'MOTIVACION' };
+  }
+
+  function show(done, ms, save) {
+    sessionTry++;
+    onDone = done;
+    const msg = pickMsg(save);
+    const el = renderCard(msg);
+    const dur = Math.min(4200, Math.max(2800, ms || 3400));
+    if (!el) { if (done) done(); return; }
     el.classList.remove('hidden');
-    // Force reflow so the fade restarts on repeated runs
     void el.offsetWidth;
     el.classList.add('on');
+    shownAt = performance.now();
     clearTimeout(timer);
-    timer = setTimeout(() => {
-      el.classList.remove('on');
-      setTimeout(() => {
-        el.classList.add('hidden');
-        if (onDone) onDone();
-      }, 320);
-    }, dur - 320);
+    timer = setTimeout(finish, dur);
   }
 
   function skip() {
-    const el = document.getElementById('spectatorMsg');
-    clearTimeout(timer);
-    if (el) { el.classList.remove('on'); el.classList.add('hidden'); }
+    if (performance.now() - shownAt < 1200) return;
+    finish();
   }
 
-  global.RLSpectator = { pick, show, skip };
+  global.RLSpectator = { show: show, skip: skip, noteLoss: noteLoss, noteWin: noteWin };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -174,7 +174,7 @@
 
   const MEMORY_LORE = [
     'El Distrito no tiene mapa: solo portales.',
-    'Kori canaliza ki en cada salto.',
+    'Kori canaliza energía en cada salto.',
     'Las constelaciones son código legible.',
     'Ningún portal lleva al mismo lugar dos veces.',
     'Logic Code Spot custodia esta IP original.',
@@ -205,36 +205,44 @@
   /** Power catalog — 100% original IP (Ω.3 §6). */
   const POWERS = [
     {
-      id: 'flight', name: 'Vuelo', icon: '▲', duration: 7, col: '#22e6ff',
-      desc: 'Gravedad cero controlada.', unlock: { type: 'base' }
+      id: 'flight', name: 'Vector Cero', icon: '▲', duration: 7, col: '#38bdf8',
+      desc: 'Vuelo controlado. Atraviesa el suelo.', unlock: { type: 'base' }
     },
     {
-      id: 'ascended', name: 'Modo Ascendido', icon: '✦', duration: 8, col: '#ffd24a',
+      id: 'ascended', name: 'Ascenso Estelar', icon: '✦', duration: 8, col: '#fbbf24',
       desc: 'Velocidad +15% e iframes extendidos.', unlock: { type: 'characters', n: 2 }
     },
     {
-      id: 'voltz_sphere', name: 'Esfera Voltz', icon: '◉', duration: 0.4, col: '#7fd0ff',
+      id: 'voltz_sphere', name: 'Núcleo Espiral', icon: '◉', duration: 0.4, col: '#60a5fa',
       desc: 'Carga y limpia el obstáculo más cercano.', unlock: { type: 'bosses', n: 1 }
     },
     {
-      id: 'double_laser', name: 'Doble Láser', icon: '⇉', duration: 0.6, col: '#ff2bd6',
+      id: 'double_laser', name: 'Doble Haz', icon: '⇉', duration: 0.6, col: '#f43f5e',
       desc: 'Dos disparos que aturden enemigos.', unlock: { type: 'worlds', n: 3 }
     },
     {
-      id: 'dance', name: 'Baile', icon: '♪', duration: 1.2, col: '#c080ff',
-      desc: 'Celebración cosmética. Bloquea salto.', unlock: { type: 'achievement', id: 'dist_400' }
+      id: 'dance', name: 'Onda Dembow', icon: '♪', duration: 3.5, col: '#ec4899',
+      desc: 'Baile con onda. Invulnerable, sin salto.', unlock: { type: 'achievement', id: 'dist_400' }
     },
     {
-      id: 'invincible', name: 'Invencibilidad', icon: '♥', duration: 10, col: '#ff5a7a',
+      id: 'invincible', name: 'Fiebre Neón', icon: '♥', duration: 8, col: '#a855f7',
       desc: 'Inmune con tema musical corto.', unlock: { type: 'worlds', n: 4 }
     },
     {
-      id: 'shadow', name: 'Modo Sombra', icon: '◐', duration: 8, col: '#8fa8c8',
+      id: 'shadow', name: 'Fase Espectral', icon: '◐', duration: 8, col: '#94a3b8',
       desc: 'Silueta translúcida, humo neón.', unlock: { type: 'worlds', n: 5 }
     },
     {
-      id: 'bullet_time', name: 'Bullet-Time', icon: '◷', duration: 5, col: '#40ffe0',
+      id: 'bullet_time', name: 'Tiempo Ámbar', icon: '◷', duration: 5, col: '#f59e0b',
       desc: 'El mundo se ralentiza, tú no.', unlock: { type: 'worlds', n: 6 }
+    },
+    {
+      id: 'volt_storm', name: 'Tormenta de Voltios', icon: '⚡', duration: 4, col: '#22d3ee',
+      desc: 'Descargas en cadena a enemigos en pantalla.', unlock: { type: 'worlds', n: 7 }
+    },
+    {
+      id: 'colossus', name: 'Coloso Tectónico', icon: '▣', duration: 9, col: '#f97316',
+      desc: 'Escala y rompe todo por contacto.', unlock: { type: 'worlds', n: 8 }
     }
   ];
 

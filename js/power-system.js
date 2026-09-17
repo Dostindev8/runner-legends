@@ -51,6 +51,8 @@
       if (this.open || this.active) return false;
       const el = document.getElementById('powerSelect');
       if (!el) return false;
+      const st = document.getElementById('stage');
+      if (st) st.classList.add('frozen');
       this.renderGrid(this.api.getSave());
       el.classList.remove('hidden');
       this.open = true;
@@ -66,6 +68,8 @@
     _closeSelector() {
       const el = document.getElementById('powerSelect');
       if (el) el.classList.add('hidden');
+      const st = document.getElementById('stage');
+      if (st) st.classList.remove('frozen');
       if (this._onKey) { document.removeEventListener('keydown', this._onKey); this._onKey = null; }
       this.open = false;
     },
@@ -134,7 +138,7 @@
       this._saved = { rt, gravityMul: rt.gravityMul, speedMul: rt.speedMul };
       if (p.id === 'flight') rt.gravityMul = rt.gravityMul * 0.08;
       if (p.id === 'ascended') rt.speedMul = rt.speedMul * 1.15;
-      if (p.id === 'invincible' || p.id === 'ascended') player.iframe = Math.max(player.iframe, p.duration);
+      if (p.id === 'invincible' || p.id === 'ascended' || p.id === 'colossus') player.iframe = Math.max(player.iframe, p.duration);
       if (player) player.superGlow = 1.4;
       if (fx.burst) fx.burst(p.col);
       if (fx.sfx) fx.sfx(p.id);
@@ -147,7 +151,7 @@
       const player = this.api.getPlayer();
       const fx = this.api.fx || {};
       this.timeLeft -= dt;
-      if (p.id === 'invincible' || p.id === 'ascended') {
+      if (p.id === 'invincible' || p.id === 'ascended' || p.id === 'colossus') {
         if (player) player.iframe = Math.max(player.iframe, Math.max(0, this.timeLeft));
       }
       if (p.id === 'voltz_sphere') {
@@ -159,7 +163,15 @@
         if (this.stage === 0) { this.stage = 1; if (fx.clearNearest) fx.clearNearest(p.col); }
         if (this.stage === 1 && this.charge >= 0.3) { this.stage = 2; if (fx.clearNearest) fx.clearNearest(p.col); }
       }
-      if ((p.id === 'flight' || p.id === 'ascended' || p.id === 'shadow') && fx.trail && Math.random() < 0.5) {
+      if (p.id === 'volt_storm') {
+        this.charge += dt;
+        if (this.charge >= 0.5) { this.charge = 0; if (fx.clearNearest) fx.clearNearest(p.col); }
+      }
+      if (p.id === 'colossus' && player) {
+        player.iframe = Math.max(player.iframe, Math.max(0, this.timeLeft));
+        player.sx = 1.25; player.sy = 1.35;
+      }
+      if ((p.id === 'flight' || p.id === 'ascended' || p.id === 'shadow' || p.id === 'volt_storm') && fx.trail && Math.random() < 0.5) {
         fx.trail(p.col);
       }
       if (this.timeLeft <= 0) this.deactivate();

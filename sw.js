@@ -1,5 +1,5 @@
 /* Runner Legends PWA — cache-first static, network-first API fallback */
-const CACHE_VERSION = 'rl-v6-1-omega3';
+const CACHE_VERSION = 'rl-v7-0-mobile-zoom';
 const PRECACHE = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const PRECACHE = [
   './js/worlds.js',
   './js/portal.js',
   './js/content-v6.js',
+  './js/messages-v7.js',
   './js/spectator-messages.js',
   './js/power-system.js',
   './js/game.js',

@@ -16,21 +16,22 @@
   const { PortalOutcomeResolver, WorldTransitionManager } = RLPortal;
 
   const CFG = {
-    logicalH: 540, ground: 96,
-    gravity: 2050, jumpVel: -790, jumpCut: 0.42,
-    coyote: 0.10, buffer: 0.10,
-    runStart: 340, runMax: 580, runAccel: 7.2,
-    player: { w: 46, h: 66, x: 0.26 },
+    logicalH: 540, ground: 88,
+    gravity: 2200, jumpVel: -900, jumpCut: 0.45, doubleJumpVel: -790,
+    coyote: 0.12, buffer: 0.15, apexScale: 0.62, apexThreshold: 140, maxFall: 1800,
+    runStart: 340, runMax: 580, runAccel: 8,
+    player: { w: 58, h: 82, x: 0.22 },
     iframes: 1.1, maxHP: 3,
     superChargePerCoin: 0.012, superChargePerSec: 1 / 40,
-    portalAt: 220, comboWindow: 1.65
+    portalAt: 220, comboWindow: 1.65,
+    spawnGrace: 3.0, postPowerGrace: 1.2
   };
 
   const DIFF = {
-    normal: { id: 'normal', label: 'Normal', scroll: 1.0, coyote: 0.1, buffer: 0.1, density: 1.0, reward: 1.0, chip: 'NORMAL' },
-    hard: { id: 'hard', label: 'Difícil', scroll: 1.15, coyote: 0.08, buffer: 0.08, density: 1.2, reward: 1.25, chip: 'DIFÍCIL' },
-    expert: { id: 'expert', label: 'Experto', scroll: 1.3, coyote: 0.06, buffer: 0.06, density: 1.35, reward: 1.5, chip: 'EXPERTO' },
-    legendary: { id: 'legendary', label: 'Legendario', scroll: 1.45, coyote: 0.04, buffer: 0.04, density: 1.5, reward: 2.0, chip: 'LEGENDARIO' }
+    normal: { id: 'normal', label: 'Normal', scroll: 1.0, coyote: 0.12, buffer: 0.15, density: 1.0, reward: 1.0, chip: 'NORMAL' },
+    hard: { id: 'hard', label: 'Difícil', scroll: 1.15, coyote: 0.11, buffer: 0.13, density: 1.15, reward: 1.25, chip: 'DIFÍCIL' },
+    expert: { id: 'expert', label: 'Experto', scroll: 1.3, coyote: 0.10, buffer: 0.12, density: 1.28, reward: 1.5, chip: 'EXPERTO' },
+    legendary: { id: 'legendary', label: 'Legendario', scroll: 1.45, coyote: 0.09, buffer: 0.12, density: 1.38, reward: 2.0, chip: 'LEGENDARIO' }
   };
 
   const TRAILS = [
@@ -65,8 +66,8 @@
   const powers = window.RLPowers || NO_POWERS;
 
   /** Physically reachable gap floor: air time of a single jump + reaction margin. */
-  const JUMP_AIR_TIME = (2 * Math.abs(CFG.jumpVel)) / CFG.gravity; // ≈0.77s
-  const REACTION_MARGIN = 0.35;
+  const JUMP_AIR_TIME = 0.95;
+  const REACTION_MARGIN = 0.60;
   function minSafeGap(speed) { return speed * (JUMP_AIR_TIME + REACTION_MARGIN); }
 
   const SAVE_KEY = 'rl_save_v2';
@@ -360,9 +361,19 @@
       const vv = window.visualViewport;
       const vw = Math.max(1, Math.round((vv && vv.width) || window.innerWidth || document.documentElement.clientWidth));
       const vh = Math.max(1, Math.round((vv && vv.height) || window.innerHeight || document.documentElement.clientHeight));
-      this.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-      this.c.width = Math.round(vw * this.dpr); this.c.height = Math.round(vh * this.dpr);
-      this.scale = vh / CFG.logicalH; this.h = CFG.logicalH; this.w = vw / this.scale;
+      this.dpr = Math.min(window.devicePixelRatio || 1, 3);
+      // Zoom the camera on phones so the runner fills the frame (logicalH 540 looked tiny).
+      const portrait = vh >= vw;
+      if (portrait && vw <= 520) this.h = 390;
+      else if (vh < 500) this.h = 360;
+      else if (vw <= 768) this.h = 440;
+      else this.h = CFG.logicalH;
+      this.scale = vh / this.h;
+      this.w = vw / this.scale;
+      this.c.width = Math.round(vw * this.dpr);
+      this.c.height = Math.round(vh * this.dpr);
+      this.ctx.imageSmoothingEnabled = true;
+      this.ctx.imageSmoothingQuality = 'high';
     }
     begin(sx, sy) {
       this.ctx.setTransform(
@@ -592,10 +603,9 @@
     get feetY() { return this.y + this.h; }
     update(dt, input, world) {
       const gY = view.groundY;
-      const coyote = activeDiff.coyote * (runtime.reactionWindow || 1);
-      const buffer = activeDiff.buffer;
-      const grav = CFG.gravity * runtime.gravityMul;
-      let maxJumps = (runtime.floatControl || runtime.localGravityFlip) ? 2 : 1;
+      const coyote = Math.max(CFG.coyote * 0.75, activeDiff.coyote * (runtime.reactionWindow || 1));
+      const buffer = Math.max(CFG.buffer * 0.75, activeDiff.buffer);
+      let maxJumps = 2;
       if (powers.freeFlight()) maxJumps = 99;
       if (input.consumeJump() && !powers.jumpLocked()) this.bufferT = buffer;
       this.bufferT = Math.max(0, this.bufferT - dt);
@@ -609,7 +619,7 @@
       const canGround = (this.onGround || this.coyoteT > 0) && this.jumpsUsed === 0;
       const canAir = !canGround && this.jumpsUsed > 0 && this.jumpsUsed < maxJumps && this.bufferT > 0;
       if (this.bufferT > 0 && (canGround || canAir)) {
-        const airMul = canAir ? 0.88 : 1;
+        const airMul = canAir ? (CFG.doubleJumpVel / CFG.jumpVel) : 1;
         this.vy = CFG.jumpVel * this.jumpMul * runtime.jumpMul * airMul;
         this.bufferT = 0; this.coyoteT = 0; this.jumpsUsed = Math.max(1, this.jumpsUsed + 1);
         this.onGround = false; this.state = PS.AIR; this.sx = 0.78; this.sy = 1.28;
@@ -617,7 +627,9 @@
         if (canAir) particles.burst(this.x, this.y + this.h * 0.5, 10, { col: trailColor(), spMax: 160, lifeMax: 0.35, g: 200 });
       }
       if (input.consumeRelease() && this.vy < 0) this.vy *= CFG.jumpCut;
-      this.vy += grav * dt; this.y += this.vy * dt;
+      let g = CFG.gravity * runtime.gravityMul;
+      if (!this.onGround && Math.abs(this.vy) < CFG.apexThreshold) g *= CFG.apexScale;
+      this.vy = Math.min(CFG.maxFall, this.vy + g * dt); this.y += this.vy * dt;
       if (this.onGround && this.state === PS.GROUND && this._wasAir) {
         this.sx = 1.28; this.sy = 0.74; particles.dust(this.x, gY); shake.add(0.14); bus.emit('land');
         if (runtime.slideOnLand) this.slideVx = rand(6, 14) * (Math.random() < 0.5 ? 1 : -1);
@@ -852,6 +864,7 @@
       this.dist = 0; this.nextGap = (view ? view.w : 800) + 80;
       this.portalSpawned = false; this.segmentDist = 0;
       this.fragSpawned = 0; this.memSpawned = 0; this.bossArmed = false;
+      this.aliveT = 0; this.spawnLock = 0;
     }
     groundAt(x) {
       let ok = true;
@@ -866,6 +879,10 @@
         });
     }
     _director() {
+      if (this.aliveT < CFG.spawnGrace || this.spawnLock > 0) {
+        this.nextGap = view.w + 80;
+        return;
+      }
       const gY = view.groundY; const dens = activeDiff.density; const r = Math.random();
       const gapMul = 1 / Math.sqrt(dens);
       // Ω.3: +40% base spacing, floored by what is physically jumpable at this speed.
@@ -896,6 +913,7 @@
       // Boss arena: slow slight for readability
       const bossMul = (this.boss.active ? 0.88 : 1) * powers.worldSpeedMul();
       this.speed = Math.min(maxSp * bossMul, this.speed + CFG.runAccel * activeDiff.scroll * dt);
+      this.aliveT += dt; this.spawnLock = Math.max(0, this.spawnLock - dt);
       const dx = this.speed * dt; this.dist += dx / 26; this.segmentDist += dx / 26;
       view.lookAhead = lerp(view.lookAhead, Math.min(28, this.speed * 0.04), clamp(dt * 4, 0, 1));
       backdrop.scroll(dx); particles.scroll(dx);
@@ -1120,7 +1138,10 @@
       if (keepRunOnPlay) { keepRunOnPlay = false; showLayer('hud'); syncHUD(); }
       else { startRun(false); showLayer('hud'); syncHUD(); }
     }
-    else if (s === 'RESULTS') { showResults(); showLayer('results'); }
+    else if (s === 'RESULTS') {
+      showResults(); showLayer('results');
+      if (window.RLSpectator && RLSpectator.noteLoss) RLSpectator.noteLoss();
+    }
   }
 
   function startRun(keepWorld) {
@@ -1140,7 +1161,7 @@
     weatherFX.rebuild(view);
     backdrop.seed(view);
     backdrop.portalFlash = 0; view.lookAhead = 0;
-    world.nextGap = view.w + 80; runOver = false;
+    world.nextGap = view.w + Math.max(80, world.speed * CFG.spawnGrace); runOver = false;
     powers.reset();
     $('diffChip').textContent = activeDiff.chip;
     $('ruleChip').textContent = runtime.rule.icon + ' ' + runtime.rule.label;
@@ -1550,10 +1571,10 @@
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, v.w, v.h);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = '900 ' + Math.round(v.h * 0.08) + 'px Orbitron,sans-serif';
+    ctx.font = '900 ' + Math.round(v.h * 0.09) + 'px Orbitron,sans-serif';
     ctx.fillStyle = '#fff'; ctx.shadowColor = '#22e6ff'; ctx.shadowBlur = 26;
     ctx.fillText('RUNNER LEGENDS', cx, cy + 40); ctx.shadowBlur = 0;
-    ctx.font = '700 13px Rajdhani,sans-serif';
+    ctx.font = '700 ' + Math.round(Math.max(16, v.h * 0.038)) + 'px Rajdhani,sans-serif';
     ctx.fillStyle = 'rgba(180,230,255,' + clamp(t - 0.5, 0, 1) + ')';
     ctx.fillText('LOGIC CODE SPOT · DISTRITO NEÓN', cx, cy + 90);
     ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
@@ -1578,7 +1599,15 @@
 
   function update(raw, dt) {
     iris.update(raw); shake.update(raw); mgr.t += raw;
-    if (powers.isPaused()) { input.consumeJump(); input.consumeRelease(); input.consumeSuper(); return; }
+    if (powers.isPaused()) {
+      input.consumeJump(); input.consumeRelease(); input.consumeSuper();
+      document.getElementById('stage').classList.add('frozen');
+      return;
+    }
+    if (document.getElementById('stage').classList.contains('frozen')) {
+      document.getElementById('stage').classList.remove('frozen');
+      if (world) world.spawnLock = Math.max(world.spawnLock || 0, CFG.postPowerGrace);
+    }
     if (mgr.state === 'PLAY') {
       powers.update(raw);
       if (input.consumeSuper()) fireSuper();
@@ -1689,12 +1718,12 @@
     }
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
-    ctx.font = '900 ' + Math.round(v.h * 0.055) + 'px Orbitron,sans-serif';
+    ctx.font = '900 ' + Math.round(v.h * 0.072) + 'px Orbitron,sans-serif';
     ctx.globalAlpha = clamp(1 - Math.abs(local - 0.5) * 0.4, 0.55, 1);
-    ctx.fillText(s.title, v.w / 2, v.h * 0.72);
+    ctx.fillText(s.title, v.w / 2, v.h * 0.68);
     ctx.fillStyle = '#cfe9ff';
-    ctx.font = '600 15px Rajdhani,sans-serif';
-    wrapText(ctx, s.body, v.w / 2, v.h * 0.8, v.w * 0.78, 20);
+    ctx.font = '600 ' + Math.round(Math.max(16, v.h * 0.036)) + 'px Rajdhani,sans-serif';
+    wrapText(ctx, s.body, v.w / 2, v.h * 0.76, v.w * 0.86, Math.round(Math.max(22, v.h * 0.048)));
     ctx.globalAlpha = 1;
     ctx.textAlign = 'start';
   }
@@ -1933,13 +1962,16 @@
 
     $('playBtn').addEventListener('click', () => {
       audio.init();
-      if (window.RLSpectator) RLSpectator.show(() => mgr.go('PLAY'));
+      if (window.RLSpectator) RLSpectator.show(() => mgr.go('PLAY'), 3400, save);
       else mgr.go('PLAY');
     });
     $('againBtn').addEventListener('click', () => mgr.go('PLAY'));
     $('menuBtn').addEventListener('click', () => mgr.go('MENU'));
     $('introBtn').addEventListener('click', () => { audio.init(); save.intro = false; mgr.go('INTRO'); });
     $('skipBtn').addEventListener('click', () => {
+      if (window.RLSpectator && $('spectatorMsg') && !$('spectatorMsg').classList.contains('hidden')) {
+        RLSpectator.skip(); return;
+      }
       if (mgr.state === 'INTRO') { save.intro = true; persist(); mgr.go('MENU'); }
       else if (mgr.state === 'LOGO') mgr.go(save.intro ? 'MENU' : 'INTRO');
       else if (mgr.state === 'TRANSIT') {

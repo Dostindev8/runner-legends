@@ -1,5 +1,21 @@
 # Changelog
 
+## [v7.0] — 2026-09-16
+
+Zoom de cámara en móvil, intro/HUD más grandes, 90 frases por voz y gaps más justos. Vanilla JS extendido (no React/TS).
+
+### Added
+- Banco `js/messages-v7.js` (90 frases, 6 voces × 15, firma Dostin Santana).
+- Tarjeta pre-partida con categoría, skip ≥1.2s, `aria-live`.
+- Poderes 9–10: Tormenta de Voltios, Coloso Tectónico (ids nuevos; los 8 anteriores conservan id).
+- Doble salto base, hang-time en el ápice, gracia de 3s al iniciar y 1.2s al cerrar SÚPER.
+
+### Changed
+- Cámara lógica ~390px en portrait ≤520px (el corredor ocupa más pantalla).
+- Tipografía de menú, intro, HUD y SÚPER más grande; créditos visibles en móvil.
+- Gap mínimo = `speed × 1.55` s. Coyote/buffer más generosos.
+- Lore: se quitó la palabra «ki».
+
 ## [Ω.3] — 2026-09-15
 
 Sistema de poderes con pausa real, mensajes al espectador y gap dinámico. IP 100% original (sin IPs de terceros).
