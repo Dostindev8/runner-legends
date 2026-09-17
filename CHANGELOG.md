@@ -1,5 +1,18 @@
 # Changelog
 
+## [v8.1] — 2026-09-16
+
+Bestiario 2–3 enemigos por mundo, daño/stun/slow según poder, telegraph, `?qa` selftest. ISO 25010: jugabilidad, fiabilidad del freeze, mantenibilidad por módulos.
+
+### Added
+- `js/enemies-v8.js` catálogo LCS (10 mundos) + perfiles de golpe por poder.
+- Enemigos con HP, stun, slow, telegraph ≥400ms (élite Final más agresivo).
+- `window.__rl.selftest()` con `?qa`.
+
+### Changed
+- Cada poder debilita o daña (Haz 90, Dembow stun 1.2s, Tormenta cadena, Guardián 200).
+- Rueda muestra costo % y toques ≥44px.
+
 ## [v8.0] — 2026-09-16
 
 Arsenal desbloqueado: 10 poderes desde la primera partida, pisotón con cadena, haz ocular, Modo Guardián original LCS, PowerLog + physics-config v2.

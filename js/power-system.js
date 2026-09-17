@@ -102,6 +102,12 @@
         ds.className = 'power-desc';
         ds.textContent = unlocked ? p.desc : this.hint(p);
         card.appendChild(ico); card.appendChild(nm); card.appendChild(ds);
+        if (unlocked && p.cost) {
+          const ct = document.createElement('span');
+          ct.className = 'power-desc';
+          ct.textContent = p.cost + '% · ' + (p.duration ? p.duration + 's' : 'impacto');
+          card.appendChild(ct);
+        }
         grid.appendChild(card);
       });
     },
@@ -150,6 +156,7 @@
       if (fx.burst) fx.burst(p.col);
       if (fx.sfx) fx.sfx(p.id);
       if (fx.toast) fx.toast('PODER: ' + p.name.toUpperCase());
+      if ((p.id === 'ascended' || p.id === 'colossus' || p.id === 'dance') && fx.hitFromPower) fx.hitFromPower(p.id, p.col);
     },
 
     update(dt) {
@@ -163,17 +170,23 @@
       }
       if (p.id === 'voltz_sphere') {
         this.charge += dt;
-        if (this.stage === 0 && this.charge >= 0.4) { this.stage = 1; if (fx.clearNearest) fx.clearNearest(p.col); }
+        if (this.stage === 0 && this.charge >= 0.4) { this.stage = 1; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
       }
       if (p.id === 'double_laser') {
         this.charge += dt;
-        if (this.stage === 0) { this.stage = 1; if (fx.clearNearest) fx.clearNearest(p.col); }
-        if (this.stage === 1 && this.charge >= 0.3) { this.stage = 2; if (fx.clearNearest) fx.clearNearest(p.col); }
+        if (this.stage === 0) { this.stage = 1; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
+        if (this.stage === 1 && this.charge >= 0.3) { this.stage = 2; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
       }
       if (p.id === 'volt_storm') {
         this.charge += dt;
-        if (this.charge >= 0.5) { this.charge = 0; if (fx.clearNearest) fx.clearNearest(p.col); }
+        if (this.charge >= 0.5) { this.charge = 0; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
       }
+      if (p.id === 'dance' || p.id === 'invincible' || p.id === 'shadow') {
+        this.charge += dt;
+        const pulse = p.id === 'dance' ? 0.7 : 0.85;
+        if (this.charge >= pulse) { this.charge = 0; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
+      }
+      if (p.id === 'bullet_time' && fx.weakenAll) fx.weakenAll(0, 0.35);
       if (p.id === 'colossus' && player) {
         player.iframe = Math.max(player.iframe, Math.max(0, this.timeLeft));
         player.sx = 1.25; player.sy = 1.35;

@@ -53,6 +53,29 @@
       });
     },
 
+    damageEnemy(o, amount) {
+      if (!o || !o.alive || o.immortal) return false;
+      const hp = o.hp == null ? 1 : o.hp;
+      o.hp = hp - amount;
+      o.flash = 0.06;
+      if (o.hp <= 0) { o.alive = false; return true; }
+      return false;
+    },
+
+    weaken(o, stun, slow) {
+      if (!o || !o.alive) return;
+      if (stun) o.stun = Math.max(o.stun || 0, stun);
+      if (slow && slow > 0 && slow < 1) o.slow = Math.min(o.slow == null ? 1 : o.slow, slow);
+    },
+
+    powerAgainst(o, powerId) {
+      const E = typeof RLEnemies !== 'undefined' ? RLEnemies : (window && window.RLEnemies);
+      const p = E && E.profile ? E.profile(powerId) : { dmg: 90, stun: 0.2, slow: 0 };
+      if (p.stun || p.slow) this.weaken(o, p.stun, p.slow || 1);
+      if (p.dmg <= 0) return false;
+      return this.damageEnemy(o, p.dmg);
+    },
+
     update(dt) {
       for (let i = this.beams.length - 1; i >= 0; i--) {
         this.beams[i].life -= dt;

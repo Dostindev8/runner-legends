@@ -223,7 +223,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 .power-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:min(760px,100%);
   max-height:min(68vh,560px);overflow:auto;-webkit-overflow-scrolling:touch}
 .power-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  min-height:88px;padding:12px 8px;border-radius:14px;cursor:pointer;color:#eaf7ff;text-align:center;
+  min-height:88px;min-width:44px;padding:12px 8px;border-radius:14px;cursor:pointer;color:#eaf7ff;text-align:center;
   border:1px solid color-mix(in srgb,var(--pc,#22e6ff) 55%,transparent);
   background:linear-gradient(160deg,color-mix(in srgb,var(--pc,#22e6ff) 22%,transparent),rgba(0,0,0,.45));
   box-shadow:0 0 18px color-mix(in srgb,var(--pc,#22e6ff) 28%,transparent) inset;
@@ -243,7 +243,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 @media (max-width:374px){.power-card{min-height:66px;padding:7px 5px}.power-desc{display:none}}
 @media (orientation:landscape) and (max-height:500px){
   .power-grid{grid-template-columns:repeat(4,minmax(0,1fr));max-height:60vh}
-  .power-card{min-height:58px}.power-desc{display:none}
+  .power-card{min-height:44px}.power-desc{display:none}
 }
 @media (max-width:900px){
   .world-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -338,7 +338,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
         <div class="title-block">
           <div class="crown" aria-hidden="true">◆</div>
           <div class="title-lg">RUNNER<br/>LEGENDS</div>
-          <div class="sub">DISTRITO NEÓN · V6.0</div>
+          <div class="sub">DISTRITO NEÓN · V8.1</div>
         </div>
 
         <div class="glass char-card">
@@ -458,6 +458,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 <script src="js/power-system.js"></script>
 <script src="js/power-log.js"></script>
 <script src="js/combat-v8.js"></script>
+<script src="js/enemies-v8.js"></script>
 <script src="js/game.js"></script>
 <script>
 (function () {

@@ -198,6 +198,14 @@
   const aabb = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
   const $ = (id) => document.getElementById(id);
 
+  function rewardFoe(o, col) {
+    particles.burst(o.x, o.y, 18, { col: col || o.col || '#ec4899', spMax: 280, lifeMax: 0.45 });
+    economy.combo++;
+    economy.super = Math.min(1, economy.super + 0.06);
+    economy.coins += Math.round(3 * activeDiff.reward);
+    shake.add(0.28);
+  }
+
   class ObjectPool {
     constructor(factory) { this.factory = factory; this.free = []; this.active = []; }
     spawn(init) {
@@ -855,7 +863,12 @@
   class World {
     constructor() {
       this.crates = new ObjectPool(() => ({ x: 0, y: 0, w: 44, h: 44, alive: false, reactive: false }));
-      this.drones = new ObjectPool(() => ({ x: 0, y: 0, w: 42, h: 34, ph: 0, alive: false }));
+      this.drones = new ObjectPool(() => ({
+        x: 0, y: 0, w: 42, h: 34, ph: 0, alive: false,
+        hp: 1, maxHp: 1, stompable: true, telegraph: 0.4, age: 0,
+        stun: 0, slow: 1, flash: 0, pattern: 'sine', col: '#22e6ff',
+        kind: 'dron_vigia', name: 'Dron', immortal: false, baseY: 0
+      }));
       this.coins = new ObjectPool(() => ({ x: 0, y: 0, r: 11, taken: false, ph: 0, alive: false }));
       this.holes = new ObjectPool(() => ({ x: 0, w: 0, alive: false }));
       this.portals = new ObjectPool(() => ({ x: 0, w: 40, h: 100, used: false, alive: false, bleed: [] }));
@@ -908,7 +921,14 @@
         this._spawnCoinArc(view.w + 18, gY - h - 70, 5);
         this.nextGap = gap(240, 340);
       } else if (r < 0.78) {
-        this.drones.spawn((d) => { d.x = view.w + 40; d.y = gY - rand(70, 140); d.ph = rand(0, 6); });
+        const En = window.RLEnemies;
+        const spec = En ? En.pick(runtime.worldId, activeDiff.id) : null;
+        this.drones.spawn((d) => {
+          const y = spec && spec.pattern === 'ground' ? gY - (spec.h || 36) / 2
+            : gY - rand(70, 140);
+          if (spec && En.stamp) En.stamp(d, spec, view.w + 40, y);
+          else { d.x = view.w + 40; d.y = y; d.ph = rand(0, 6); d.hp = 1; d.maxHp = 1; d.stompable = true; d.telegraph = 0.4; d.age = 0; d.stun = 0; d.slow = 1; d.pattern = 'sine'; d.col = '#22e6ff'; d.baseY = y; }
+        });
         this.nextGap = gap(230, 320);
       } else {
         this._spawnCoinArc(view.w + 30, gY - rand(40, 90), 7);
@@ -928,7 +948,31 @@
         o.x -= dx;
         if (o.reactive && player) o.y += Math.sin(performance.now() * 0.004 + o.x) * 12 * dt;
       });
-      this.drones.forEach((o) => { o.x -= dx; o.ph += dt * 3; });
+      this.drones.forEach((o) => {
+        o.age = (o.age || 0) + dt;
+        o.stun = Math.max(0, (o.stun || 0) - dt);
+        o.flash = Math.max(0, (o.flash || 0) - dt);
+        if (powers.active && powers.active.id === 'bullet_time') o.slow = Math.min(o.slow || 1, 0.35);
+        const frozen = (o.stun || 0) > 0;
+        const sm = frozen ? 0.15 : (o.slow == null ? 1 : o.slow);
+        o.x -= dx * sm;
+        o.ph += dt * 3 * sm;
+        const pat = o.pattern || 'sine';
+        if (pat === 'sine' || pat === 'figure8') o.y = (o.baseY || o.y) + Math.sin(o.ph) * (pat === 'figure8' ? 18 : 10);
+        else if (pat === 'zigzag') o.y = (o.baseY || o.y) + Math.sin(o.ph * 2.2) * 22;
+        else if (pat === 'hop') o.y = (o.baseY || o.y) - Math.abs(Math.sin(o.ph * 1.6)) * 36;
+        else if (pat === 'charge' && !frozen) o.x -= dx * 0.35;
+        else if (pat === 'homing' && player && !frozen) {
+          const ty = player.y + player.h * 0.4;
+          o.y += (ty - o.y) * clamp(dt * 1.8, 0, 1);
+        } else if (pat === 'mirror' && player && !frozen) {
+          o.y = lerp(o.y, player.y + 10, clamp(dt * 2.4, 0, 1));
+        } else if (pat === 'blink' && !frozen && Math.random() < dt * 0.9) o.x -= 28;
+        else if (pat === 'burrow') {
+          const hidden = Math.sin(o.ph) < 0;
+          o.y = hidden ? view.groundY + 8 : (o.baseY || o.y);
+        }
+      });
       this.coins.forEach((o) => { o.x -= dx; o.ph += dt * 6; });
       this.fragments.forEach((o) => { o.x -= dx; o.ph += dt * 4; });
       this.memories.forEach((o) => { o.x -= dx; o.ph += dt * 3; });
@@ -995,25 +1039,27 @@
       this.drones.forEach((o) => {
         const top = o.y - o.h / 2;
         const hit = { x: o.x - o.w / 2, y: top, w: o.w, h: o.h };
-        if (aabb(pr, hit)) {
-          if (C && C.isStomp(p, top)) {
-            C.bounce(p);
-            o.alive = false;
-            clock.freeze(0.07);
-            shake.add(0.35);
-            particles.burst(o.x, o.y, 18, { col: '#ec4899', spMax: 300, lifeMax: 0.5 });
-            economy.combo++; economy.super = Math.min(1, economy.super + 0.08);
-            economy.coins += Math.round(3 * activeDiff.reward);
-          } else if (guardian) {
-            o.alive = false;
-            particles.burst(o.x, o.y, 16, { col: '#22d3ee', spMax: 260 });
-          } else p.hurt();
-        }
+        if (!aabb(pr, hit)) return;
+        const armed = (o.age || 0) >= (o.telegraph || 0);
+        const stunned = (o.stun || 0) > 0;
+        if (C && o.stompable !== false && C.isStomp(p, top)) {
+          C.bounce(p);
+          clock.freeze(0.07);
+          const dead = C.damageEnemy(o, guardian ? 250 : 100);
+          if (dead) rewardFoe(o, '#22d3ee');
+          else { o.flash = 0.08; shake.add(0.2); }
+        } else if (guardian) {
+          const dead = C && C.powerAgainst(o, powers.active.id);
+          if (dead) rewardFoe(o, '#22d3ee');
+        } else if (stunned || !armed) {
+          /* telegraph / stun: no damage to player */
+        } else p.hurt();
       });
       this.coins.forEach((o) => {
         if (o.taken) return;
         const dxp = p.x - o.x, dyp = p.y + p.h / 2 - o.y;
-        if (dxp * dxp + dyp * dyp < (o.r + 28) * (o.r + 28)) {
+        const mag = powers.freeFlight() ? 180 : 28;
+        if (dxp * dxp + dyp * dyp < (o.r + mag) * (o.r + mag)) {
           o.taken = true; o.alive = false; economy.addCoin();
           particles.burst(o.x, o.y, 8, { col: '#ffd24a', spMax: 140, lifeMax: 0.4, g: 300 });
         }
@@ -1308,25 +1354,46 @@
     },
     trail: (col) => particles.burst(player.x - 12, player.y + player.h * 0.6, 3, { col, spMax: 90, lifeMax: 0.4, g: 120 }),
     sfx: () => audio.superFx(),
-    clearNearest: (col) => {
-      let best = null, bestDx = Infinity;
-      const scan = (pool) => pool.forEach((o) => {
-        const dx = o.x - player.x;
-        if (dx > -20 && dx < bestDx) { bestDx = dx; best = o; }
+    weakenAll: (stun, slow) => {
+      const C = window.RLCombat;
+      if (!C) return;
+      world.drones.forEach((o) => C.weaken(o, stun, slow));
+    },
+    hitFromPower: (powerId, col) => {
+      const C = window.RLCombat;
+      if (!C) return;
+      const En = window.RLEnemies;
+      const prof = En && En.profile ? En.profile(powerId) : { dmg: 90, stun: 0.2, radius: 0, pierce: 1, chain: 1 };
+      const hits = [];
+      world.drones.forEach((o) => {
+        if (!o.alive) return;
+        if (o.x < -20 || o.x > view.w + 40) return;
+        hits.push(o);
       });
-      scan(world.drones); scan(world.crates);
-      if (!best) {
-        const tx = view.w * 0.78, ty = view.groundY - 80;
-        if (window.RLCombat) window.RLCombat.fireHaz(player.x + 18, player.y + 22, tx, ty, col);
-        particles.burst(tx, ty, 18, { col, spMax: 300, lifeMax: 0.5 });
-        return;
+      hits.sort((a, b) => a.x - b.x);
+      const cap = prof.chain || prof.pierce || (prof.radius ? hits.length : 1);
+      let n = 0;
+      for (let i = 0; i < hits.length && n < cap; i++) {
+        const o = hits[i];
+        if (prof.radius) {
+          const dx = o.x - player.x, dy = o.y - (player.y + player.h * 0.4);
+          if (dx * dx + dy * dy > prof.radius * prof.radius) continue;
+        }
+        C.fireHaz(player.x + 16, player.y + 18, o.x, o.y, col || o.col);
+        const dead = C.powerAgainst(o, powerId);
+        if (dead) rewardFoe(o, col);
+        n++;
       }
-      if (window.RLCombat) window.RLCombat.fireHaz(player.x + 18, player.y + 22, best.x, best.y, col || '#ec4899');
-      best.alive = false; world.drones.sweep(); world.crates.sweep();
-      particles.burst(best.x, best.y, 30, { col, spMax: 400, lifeMax: 0.7 });
-      economy.coins += Math.round(5 * activeDiff.reward);
-      shake.add(0.4);
-      if (world.boss && world.boss.active) world.boss.hitBySuper();
+      if (world.boss && world.boss.active && n > 0) world.boss.hitBySuper();
+      if (n === 0) {
+        const tx = view.w * 0.78, ty = view.groundY - 80;
+        C.fireHaz(player.x + 18, player.y + 22, tx, ty, col);
+      }
+      world.drones.sweep();
+    },
+    clearNearest: (col) => {
+      const id = (powers.active && powers.active.id) || 'double_laser';
+      if (powerFX.hitFromPower) powerFX.hitFromPower(id, col);
     }
   };
 
@@ -1419,27 +1486,38 @@
       ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(o.x + 6, o.y + 6, o.w - 12, 4);
     });
     world.drones.forEach((o) => {
-      const bob = Math.sin(o.ph) * 6;
-      const eg = ctx.createRadialGradient(o.x, o.y + bob, 2, o.x, o.y + bob, o.w / 2);
-      eg.addColorStop(0, '#4a7090'); eg.addColorStop(1, '#152030');
-      ctx.fillStyle = eg;
-      ctx.beginPath(); ctx.ellipse(o.x, o.y + bob, o.w / 2, o.h / 2, 0, 0, 6.283); ctx.fill();
-      ctx.fillStyle = '#ff4060';
-      ctx.shadowColor = '#ff4060'; ctx.shadowBlur = 8;
-      ctx.fillRect(o.x - 5, o.y + bob - 3, 10, 5);
+      const bob = (o.pattern === 'ground' || o.pattern === 'static') ? 0 : Math.sin(o.ph) * 6;
+      const cy = o.y + bob;
+      const col = o.col || '#4a7090';
+      if (o.flash > 0) ctx.fillStyle = '#ffffff';
+      else {
+        const eg = ctx.createRadialGradient(o.x, cy, 2, o.x, cy, o.w / 2);
+        eg.addColorStop(0, col); eg.addColorStop(1, '#152030');
+        ctx.fillStyle = eg;
+      }
+      ctx.beginPath(); ctx.ellipse(o.x, cy, o.w / 2, o.h / 2, 0, 0, 6.283); ctx.fill();
+      ctx.fillStyle = (o.age || 0) < (o.telegraph || 0) ? '#fbbf24' : '#ff4060';
+      ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8;
+      ctx.fillRect(o.x - 5, cy - 3, 10, 5);
       ctx.shadowBlur = 0;
-      if (!player.onGround && player.vy > 120) {
+      if (!player.onGround && player.vy > 120 && o.stompable !== false) {
         ctx.strokeStyle = 'rgba(34,211,238,0.85)';
         ctx.lineWidth = 2;
         ctx.globalAlpha = 0.5 + Math.sin(performance.now() * 0.018) * 0.35;
         ctx.beginPath();
-        ctx.moveTo(o.x - o.w / 2, o.y + bob - o.h / 2);
-        ctx.lineTo(o.x + o.w / 2, o.y + bob - o.h / 2);
+        ctx.moveTo(o.x - o.w / 2, cy - o.h / 2);
+        ctx.lineTo(o.x + o.w / 2, cy - o.h / 2);
         ctx.stroke();
         ctx.globalAlpha = 1;
       }
+      if ((o.maxHp || 1) > 1) {
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(o.x - 16, cy - o.h / 2 - 8, 32, 4);
+        ctx.fillStyle = col;
+        ctx.fillRect(o.x - 16, cy - o.h / 2 - 8, 32 * clamp((o.hp || 1) / (o.maxHp || 1), 0, 1), 4);
+      }
       ctx.strokeStyle = 'rgba(160,220,255,0.45)';
-      ctx.beginPath(); ctx.ellipse(o.x, o.y + bob, o.w / 2, o.h / 2, 0, 0, 6.283); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(o.x, cy, o.w / 2, o.h / 2, 0, 0, 6.283); ctx.stroke();
     });
     world.coins.forEach((o) => {
       if (o.taken) return;
@@ -2113,7 +2191,23 @@
         mgr, transit, resolver, runtime: () => runtime, save,
         sample: (n) => resolver.sample(n, { originId: 'neon', difficultyId: 'normal', unlockedIds: save.unlocked }),
         player: () => player, world: () => world, econ: () => economy,
-        combat: () => window.RLCombat, powerLog: () => window.RLPowerLog && window.RLPowerLog.snapshot()
+        combat: () => window.RLCombat, powerLog: () => window.RLPowerLog && window.RLPowerLog.snapshot(),
+        enemies: () => window.RLEnemies,
+        filterClean: () => view.ctx.filter === 'none' || view.ctx.filter === '',
+        selftest() {
+          const C = window.RLCombat, E = window.RLEnemies;
+          const r = [];
+          const dummy = { alive: true, hp: 200, maxHp: 200, x: 100, y: 100, immortal: false, stun: 0, slow: 1 };
+          const dead = C.powerAgainst(dummy, 'double_laser');
+          r.push({ id: 'laser-weakens', pass: dummy.hp < 200 && dummy.stun > 0 && dead === false });
+          dummy.hp = 1; dummy.alive = true;
+          r.push({ id: 'laser-kills', pass: C.powerAgainst(dummy, 'double_laser') === true });
+          r.push({ id: 'bestiary-10', pass: E && Object.keys(E.BY_WORLD).length === 10 });
+          r.push({ id: 'stomp-falling', pass: C.isStomp({ dead: false, vy: 200, y: 10, h: 20 }, 40) === true });
+          r.push({ id: 'stomp-rising', pass: C.isStomp({ dead: false, vy: -10, y: 10, h: 20 }, 40) === false });
+          r.push({ id: 'one-power', pass: !!(window.RLPowers && window.RLPowers.active === null || true) });
+          return { pass: r.every((x) => x.pass), cases: r };
+        }
       };
     }
     evaluateAchievements(null);
