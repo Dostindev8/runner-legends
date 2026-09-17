@@ -6,7 +6,7 @@
  * EXTEND (v3.0): difficulty profiles live in `./difficulty.ts` (coyote floor 40ms).
  * Portal waypoint ids for anti-cheat ghost rejection: LEVEL_PORTALS below.
  */
-export const PHYSICS_CONFIG_VERSION = '1.0.0';
+export const PHYSICS_CONFIG_VERSION = '2.0.0';
 
 export interface CharacterPhysics { baseMaxSpeed: number } // world units / second
 
@@ -25,9 +25,36 @@ export const SPEED_MARGIN = 1.05;           // GDD 3.5: 5% tolerance
 export const COIN_MARGIN = 1.05;            // GDD 3.5: 5% overlap tolerance
 export const MAX_INPUTS_PER_SECOND = 20;    // human tap ceiling (script-farming guard)
 
-export function absoluteMaxSpeed(characterId: string): number {
+export const POWER_ENVELOPES: Record<string, { maxSpeedMult: number; cost: number }> = {
+  VECTOR_CERO: { maxSpeedMult: 1.0, cost: 45 },
+  MODO_GUARDIAN: { maxSpeedMult: 1.45, cost: 100 },
+  HAZ_OCULAR: { maxSpeedMult: 1.0, cost: 50 },
+  NUCLEO_ESPIRAL: { maxSpeedMult: 1.0, cost: 55 },
+  FIEBRE_NEON: { maxSpeedMult: 1.2, cost: 60 },
+  ONDA_DEMBOW: { maxSpeedMult: 1.0, cost: 40 },
+  TIEMPO_AMBAR: { maxSpeedMult: 1.0, cost: 50 },
+  TORMENTA_VOLTIOS: { maxSpeedMult: 1.0, cost: 65 },
+  FASE_ESPECTRAL: { maxSpeedMult: 1.0, cost: 45 },
+  EXPLOSION_ESTELAR: { maxSpeedMult: 1.0, cost: 100 },
+};
+
+export const COMBAT = {
+  maxChainedStomps: 8,
+};
+
+/** Distance/coins generate charge; powers may not consume more than this envelope. */
+export function maxGenerableCharge(distanceMeters: number, coinsCollected: number): number {
+  return distanceMeters * 0.12 + coinsCollected * 0.35 + 100;
+}
+
+export function absoluteMaxSpeed(characterId: string, powerIds: string[] = []): number {
   const base = CHARACTER_PHYSICS[characterId]?.baseMaxSpeed ?? 12;
-  return base * SPEED_UPGRADE_MAX_MULT * SUPER_MOBILITY_MAX_MULT * SPEED_MARGIN;
+  let powerMult = 1;
+  for (const id of powerIds) {
+    const env = POWER_ENVELOPES[id];
+    if (env) powerMult = Math.max(powerMult, env.maxSpeedMult);
+  }
+  return base * SPEED_UPGRADE_MAX_MULT * SUPER_MOBILITY_MAX_MULT * SPEED_MARGIN * powerMult;
 }
 
 export interface LevelBounds { minTimeMs: number; maxCoins: number; lengthMeters: number }

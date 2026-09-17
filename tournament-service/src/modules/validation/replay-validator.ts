@@ -1,5 +1,8 @@
 import {
   PHYSICS_CONFIG_VERSION,
+  POWER_ENVELOPES,
+  COMBAT,
+  maxGenerableCharge,
   absoluteMaxSpeed,
   levelBounds,
   levelPortalIds,
@@ -21,6 +24,9 @@ export interface ReplayFacts {
   difficultyId: string;
   /** Ordered portal waypoint ids traversed this run (ghost ids rejected vs LEVEL_PORTALS). */
   portalRoute: string[];
+  /** Optional v2 power envelope — client PowerLog. */
+  powerLog?: { powerId: string; startMs: number; endMs: number; chargeConsumed: number }[];
+  chainedStompsMax?: number;
 }
 
 export type RejectReason =
@@ -31,7 +37,10 @@ export type RejectReason =
   | 'distance-impossible'
   | 'input-spam'
   | 'unknown-difficulty'
-  | 'portal-ghost';
+  | 'portal-ghost'
+  | 'power-unknown'
+  | 'power-charge-mismatch'
+  | 'stomp-chain-exceeded';
 
 export interface ValidationResult { valid: boolean; reason?: RejectReason }
 
@@ -56,8 +65,22 @@ export function validateReplay(f: ReplayFacts): ValidationResult {
   const seconds = f.durationMs / 1000;
   if (seconds <= 0 || f.durationMs < bounds.minTimeMs) return { valid: false, reason: 'impossible-time' };
 
+  const powerIds: string[] = [];
+  let consumed = 0;
+  for (const entry of f.powerLog ?? []) {
+    if (!POWER_ENVELOPES[entry.powerId]) return { valid: false, reason: 'power-unknown' };
+    powerIds.push(entry.powerId);
+    consumed += Math.max(0, entry.chargeConsumed || 0);
+  }
+  if (consumed > maxGenerableCharge(f.distanceMeters, f.coinsCollected)) {
+    return { valid: false, reason: 'power-charge-mismatch' };
+  }
+  if ((f.chainedStompsMax ?? 0) > COMBAT.maxChainedStomps) {
+    return { valid: false, reason: 'stomp-chain-exceeded' };
+  }
+
   const impliedSpeed = f.distanceMeters / seconds;
-  if (impliedSpeed > absoluteMaxSpeed(f.characterId)) return { valid: false, reason: 'speed-exceeded' };
+  if (impliedSpeed > absoluteMaxSpeed(f.characterId, powerIds)) return { valid: false, reason: 'speed-exceeded' };
 
   if (f.distanceMeters > bounds.lengthMeters * 1.1) return { valid: false, reason: 'distance-impossible' };
   if (f.coinsCollected > bounds.maxCoins * COIN_MARGIN) return { valid: false, reason: 'coins-impossible' };
