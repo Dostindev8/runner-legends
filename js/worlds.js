@@ -102,7 +102,7 @@
       specialRule: 'sand_push',
       specialRuleVariants: [],
       transitionLayers: ['tunnel', 'galaxy', 'planet', 'sand'],
-      palette: { sky0: '#1a0e04', sky1: '#3a2208', sky2: '#6a3a10', glow: 'rgba(255,180,60,0.5)', mid: '#4a2a0c', accent: '#ffd24a', ground: '#3a2810' },
+      palette: { sky0: '#120804', sky1: '#2a1608', sky2: '#4a2810', glow: 'rgba(255,180,60,0.5)', mid: '#2a180c', accent: '#ffd24a', ground: '#1a1208' },
       bleed: 'dunes', musicTone: 180
     },
     {

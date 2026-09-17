@@ -20,7 +20,7 @@
     gravity: 2200, jumpVel: -900, jumpCut: 0.45, doubleJumpVel: -790,
     coyote: 0.12, buffer: 0.15, apexScale: 0.62, apexThreshold: 140, maxFall: 1800,
     runStart: 340, runMax: 580, runAccel: 8,
-    player: { w: 58, h: 82, x: 0.22 },
+    player: { w: 72, h: 98, x: 0.20 },
     iframes: 1.1, maxHP: 3,
     superChargePerCoin: 0.012, superChargePerSec: 1 / 40,
     portalAt: 220, comboWindow: 1.65,
@@ -376,6 +376,9 @@
       this.ctx.imageSmoothingQuality = 'high';
     }
     begin(sx, sy) {
+      this.ctx.filter = 'none';
+      this.ctx.globalCompositeOperation = 'source-over';
+      this.ctx.globalAlpha = 1;
       this.ctx.setTransform(
         this.dpr * this.scale, 0, 0, this.dpr * this.scale,
         this.dpr * (sx - this.lookAhead) * this.scale, this.dpr * sy * this.scale
@@ -397,6 +400,7 @@
   class Particles {
     constructor() {
       this.pool = new ObjectPool(() => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, size: 2, col: '#fff', g: 0, alive: false }));
+      for (let i = 0; i < 1400; i++) this.pool.free.push(this.pool.factory());
     }
     burst(x, y, n, opt) {
       opt = opt || {};
@@ -557,13 +561,15 @@
           ctx.fillRect(b.x, y, L.w * 0.62, h);
           if (b.lit) {
             ctx.fillStyle = pal.accent + '22';
-            // fallback if accent is hex without alpha helper
-            ctx.fillStyle = 'rgba(34,230,255,0.12)';
-            if (runtime.worldId === 'neon') ctx.fillStyle = 'rgba(255,43,214,0.14)';
-            else if (runtime.worldId === 'golden') ctx.fillStyle = 'rgba(255,200,80,0.12)';
-            else if (runtime.worldId === 'ice') ctx.fillStyle = 'rgba(180,230,255,0.14)';
-            else if (runtime.worldId === 'igneous') ctx.fillStyle = 'rgba(255,100,40,0.14)';
-            for (let wy = y + 14; wy < base - 12; wy += 22) ctx.fillRect(b.x + 8, wy, L.w * 0.46, 3);
+            ctx.fillStyle = 'rgba(34,230,255,0.22)';
+            if (runtime.worldId === 'neon') ctx.fillStyle = 'rgba(255,43,214,0.28)';
+            else if (runtime.worldId === 'golden') ctx.fillStyle = 'rgba(255,210,90,0.28)';
+            else if (runtime.worldId === 'ice') ctx.fillStyle = 'rgba(180,230,255,0.24)';
+            else if (runtime.worldId === 'igneous') ctx.fillStyle = 'rgba(255,100,40,0.24)';
+            for (let wy = y + 10; wy < base - 10; wy += 16) {
+              ctx.fillRect(b.x + 6, wy, L.w * 0.18, 4);
+              ctx.fillRect(b.x + L.w * 0.28, wy + 4, L.w * 0.16, 4);
+            }
           }
           // Roof neon accent bar
           ctx.fillStyle = pal.accent;
@@ -613,6 +619,7 @@
       if (supported && this.vy >= 0) {
         this.onGround = true; this.state = PS.GROUND; this.coyoteT = coyote; this.jumpsUsed = 0;
         this.y = gY - this.h; this.vy = 0;
+        if (window.RLCombat) window.RLCombat.land();
       } else {
         this.onGround = false; this.state = PS.AIR; this.coyoteT = Math.max(0, this.coyoteT - dt);
       }
@@ -968,14 +975,40 @@
     }
     _collisions(p) {
       const pr = p.rect();
+      const C = window.RLCombat;
+      const guardian = powers.active && (powers.active.id === 'ascended' || powers.active.id === 'colossus');
       this.crates.forEach((o) => {
         if (aabb(pr, o)) {
-          if (pr.y + pr.h - o.y < 18 && p.vy >= 0) { p.y = o.y - p.h; p.vy = 0; p.onGround = true; }
+          if (C && C.isStomp(p, o.y)) {
+            const r = C.bounce(p);
+            o.alive = false;
+            clock.freeze(0.07);
+            shake.add(0.35);
+            particles.burst(o.x + o.w / 2, o.y, 18, { col: '#22d3ee', spMax: 280, lifeMax: 0.45 });
+            economy.combo++; economy.super = Math.min(1, economy.super + 0.08);
+            if (economy.addCoin && r.scoreMul) economy.coins += Math.round(2 * r.scoreMul);
+          } else if (pr.y + pr.h - o.y < 18 && p.vy >= 0) { p.y = o.y - p.h; p.vy = 0; p.onGround = true; }
+          else if (guardian) { o.alive = false; particles.burst(o.x, o.y, 12, { col: '#22d3ee', spMax: 220 }); }
           else p.hurt();
         }
       });
       this.drones.forEach((o) => {
-        if (aabb(pr, { x: o.x - o.w / 2, y: o.y - o.h / 2, w: o.w, h: o.h })) p.hurt();
+        const top = o.y - o.h / 2;
+        const hit = { x: o.x - o.w / 2, y: top, w: o.w, h: o.h };
+        if (aabb(pr, hit)) {
+          if (C && C.isStomp(p, top)) {
+            C.bounce(p);
+            o.alive = false;
+            clock.freeze(0.07);
+            shake.add(0.35);
+            particles.burst(o.x, o.y, 18, { col: '#ec4899', spMax: 300, lifeMax: 0.5 });
+            economy.combo++; economy.super = Math.min(1, economy.super + 0.08);
+            economy.coins += Math.round(3 * activeDiff.reward);
+          } else if (guardian) {
+            o.alive = false;
+            particles.burst(o.x, o.y, 16, { col: '#22d3ee', spMax: 260 });
+          } else p.hurt();
+        }
       });
       this.coins.forEach((o) => {
         if (o.taken) return;
@@ -1163,6 +1196,8 @@
     backdrop.portalFlash = 0; view.lookAhead = 0;
     world.nextGap = view.w + Math.max(80, world.speed * CFG.spawnGrace); runOver = false;
     powers.reset();
+    if (window.RLCombat) window.RLCombat.reset();
+    if (window.RLPowerLog) window.RLPowerLog.reset();
     $('diffChip').textContent = activeDiff.chip;
     $('ruleChip').textContent = runtime.rule.icon + ' ' + runtime.rule.label;
     $('worldChip').textContent = runtime.world.name.toUpperCase();
@@ -1246,7 +1281,7 @@
   /** Ω.3: SÚPER opens the power selector (real pause). Falls back to the
    *  classic instant blast when the module is absent or already busy. */
   function fireSuper() {
-    if (economy.super < 1 || player.dead) return;
+    if (economy.super < 0.4 || player.dead) return;
     if (powers.active) { flashToast(powers.label()); return; }
     if (powers.openSelector()) return;
     classicSuper();
@@ -1280,7 +1315,13 @@
         if (dx > -20 && dx < bestDx) { bestDx = dx; best = o; }
       });
       scan(world.drones); scan(world.crates);
-      if (!best) { particles.burst(view.w * 0.7, view.groundY - 60, 18, { col, spMax: 300, lifeMax: 0.5 }); return; }
+      if (!best) {
+        const tx = view.w * 0.78, ty = view.groundY - 80;
+        if (window.RLCombat) window.RLCombat.fireHaz(player.x + 18, player.y + 22, tx, ty, col);
+        particles.burst(tx, ty, 18, { col, spMax: 300, lifeMax: 0.5 });
+        return;
+      }
+      if (window.RLCombat) window.RLCombat.fireHaz(player.x + 18, player.y + 22, best.x, best.y, col || '#ec4899');
       best.alive = false; world.drones.sweep(); world.crates.sweep();
       particles.burst(best.x, best.y, 30, { col, spMax: 400, lifeMax: 0.7 });
       economy.coins += Math.round(5 * activeDiff.reward);
@@ -1329,9 +1370,10 @@
       '<span style="color:#4a2740">' + '●'.repeat(CFG.maxHP - hp) + '</span>';
     const pct = Math.round(economy.super * 100);
     $('superBar').firstElementChild.style.width = pct + '%';
-    const ready = economy.super >= 1;
+    const ready = economy.super >= 0.4;
     $('superBar').classList.toggle('ready', ready);
     $('superBtn').classList.toggle('ready', ready);
+    if (powers.active) $('superBtn').classList.remove('ready');
     $('energyArc').style.setProperty('--p', String(economy.super));
     $('resistArc').style.setProperty('--p', String(hp / CFG.maxHP));
     $('ruleChip').textContent = runtime.rule.icon + ' ' + runtime.rule.label;
@@ -1386,7 +1428,18 @@
       ctx.shadowColor = '#ff4060'; ctx.shadowBlur = 8;
       ctx.fillRect(o.x - 5, o.y + bob - 3, 10, 5);
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = 'rgba(160,220,255,0.45)'; ctx.stroke();
+      if (!player.onGround && player.vy > 120) {
+        ctx.strokeStyle = 'rgba(34,211,238,0.85)';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.5 + Math.sin(performance.now() * 0.018) * 0.35;
+        ctx.beginPath();
+        ctx.moveTo(o.x - o.w / 2, o.y + bob - o.h / 2);
+        ctx.lineTo(o.x + o.w / 2, o.y + bob - o.h / 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      ctx.strokeStyle = 'rgba(160,220,255,0.45)';
+      ctx.beginPath(); ctx.ellipse(o.x, o.y + bob, o.w / 2, o.h / 2, 0, 0, 6.283); ctx.stroke();
     });
     world.coins.forEach((o) => {
       if (o.taken) return;
@@ -1471,45 +1524,85 @@
     const w = p.w * p.sx, h = p.h * p.sy;
     const bob = idle ? Math.sin(performance.now() * 0.004) * 3 : (p.onGround ? Math.sin((p.runPhase || 0) * 14) * 2 : 0);
     const col = trailColor();
+    const guardian = powers.active && (powers.active.id === 'ascended' || powers.active.id === 'colossus');
     ctx.save();
-    // Trail ghosts
     if (!idle && p.trail) {
       for (let i = 0; i < p.trail.length; i++) {
         const tr = p.trail[i];
-        ctx.globalAlpha = clamp(tr.life * 2.2, 0, 0.35);
-        ctx.fillStyle = col;
-        ctx.fillRect(tr.x - w * 0.35, tr.y - h * 0.35, w * 0.7, h * 0.55);
+        ctx.globalAlpha = clamp(tr.life * 2.2, 0, 0.28);
+        ctx.fillStyle = guardian ? '#22d3ee' : col;
+        ctx.fillRect(tr.x - w * 0.28, tr.y - h * 0.3, w * 0.55, h * 0.5);
       }
       ctx.globalAlpha = 1;
     }
     ctx.translate(cx, top + h / 2 + bob);
     ctx.globalAlpha = powers.alphaMul();
     if (p.iframe > 0 && Math.floor(performance.now() / 60) % 2 === 0) ctx.globalAlpha *= 0.45;
-    if (p.superGlow > 0 || (economy && economy.buffT > 0)) {
-      ctx.shadowColor = '#ffd24a'; ctx.shadowBlur = 18;
-    } else {
-      ctx.shadowColor = col; ctx.shadowBlur = 10;
-    }
-    // Body
+    const kick = idle ? 0 : Math.sin((p.runPhase || 0) * 14) * 5;
+    ctx.shadowColor = guardian ? '#22d3ee' : col;
+    ctx.shadowBlur = 16;
+    // Legs
+    ctx.fillStyle = guardian ? '#1e293b' : '#0b1228';
+    ctx.fillRect(-w * 0.28, h * 0.18, 14, h * 0.32 + kick * 0.4);
+    ctx.fillRect(w * 0.08, h * 0.18, 14, h * 0.32 - kick * 0.4);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(-w * 0.30, h * 0.46 + kick * 0.4, 16, 8);
+    ctx.fillRect(w * 0.06, h * 0.46 - kick * 0.4, 16, 8);
+    // Torso plates
     const body = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
-    body.addColorStop(0, '#2a55c8'); body.addColorStop(1, '#0d1f5c');
+    if (guardian) {
+      body.addColorStop(0, '#334155'); body.addColorStop(0.5, '#0f172a'); body.addColorStop(1, '#22d3ee');
+    } else {
+      body.addColorStop(0, '#1e3a8a'); body.addColorStop(0.45, '#0f172a'); body.addColorStop(1, '#22d3ee');
+    }
     ctx.fillStyle = body;
-    ctx.fillRect(-w / 2, -h / 2, w, h);
-    // Visor
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.38, -h * 0.08);
+    ctx.lineTo(w * 0.38, -h * 0.12);
+    ctx.lineTo(w * 0.32, h * 0.28);
+    ctx.lineTo(-w * 0.32, h * 0.32);
+    ctx.closePath();
+    ctx.fill();
+    // Arms
+    ctx.fillStyle = guardian ? '#334155' : '#1e293b';
+    ctx.fillRect(-w * 0.52, -h * 0.06, 16, h * 0.28);
+    ctx.fillRect(w * 0.30, -h * 0.10, 16, h * 0.26);
+    ctx.fillStyle = '#22d3ee';
+    ctx.fillRect(-w * 0.50, h * 0.16, 12, 6);
+    ctx.fillRect(w * 0.32, h * 0.12, 12, 6);
+    // Head + monocular visor (LCS original — single stripe, not dual visor)
+    ctx.fillStyle = '#0b1224';
+    ctx.beginPath();
+    ctx.ellipse(0, -h * 0.32, w * 0.28, h * 0.22, 0, 0, 6.283);
+    ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = '#ff2bd6';
-    ctx.fillRect(-w / 2 + 5, -h / 2 + 12, w - 10, 9);
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.fillRect(-w / 2 + 8, -h / 2 + 14, w * 0.35, 3);
-    // Thrusters / feet
-    ctx.fillStyle = '#ffd24a';
-    const kick = idle ? 0 : Math.sin((p.runPhase || 0) * 14) * 4;
-    ctx.fillRect(-w / 2 - 1, h / 2 - 12 + kick, 9, 9);
-    ctx.fillRect(w / 2 - 8, h / 2 - 12 - kick, 9, 9);
+    const visor = ctx.createLinearGradient(-w * 0.22, 0, w * 0.22, 0);
+    visor.addColorStop(0, '#22d3ee');
+    visor.addColorStop(0.45, '#ffffff');
+    visor.addColorStop(1, '#ec4899');
+    ctx.fillStyle = visor;
+    ctx.fillRect(-w * 0.20, -h * 0.36, w * 0.42, 9);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillRect(-w * 0.18, -h * 0.34, w * 0.16, 3);
+    // Morpher on left forearm
+    ctx.fillStyle = '#a855f7';
+    ctx.fillRect(-w * 0.54, 0.02 * h, 10, 10);
+    ctx.strokeStyle = '#22d3ee';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-w * 0.54, 0.02 * h, 10, 10);
     // Chest core
     ctx.fillStyle = col;
-    ctx.beginPath(); ctx.arc(0, 2, 5, 0, 6.283); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, h * 0.02, 6, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(0, h * 0.02, 2.4, 0, 6.283); ctx.fill();
+    if (guardian) {
+      ctx.strokeStyle = '#a855f7';
+      ctx.globalAlpha *= 0.85;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-w * 0.42, -h * 0.16, w * 0.84, h * 0.42);
+    }
     ctx.restore();
+    if (!idle && window.RLCombat) window.RLCombat.draw(ctx);
   }
 
   function drawTransit(ctx, v) {
@@ -1616,6 +1709,7 @@
         player.runPhase = (player.runPhase || 0) + dt;
         player.update(dt, input, world);
         economy.update(dt);
+        if (window.RLCombat) window.RLCombat.update(dt);
       } else world.update(0, player);
       particles.update(raw); backdrop.update(raw); weatherFX.update(raw, view); syncHUD();
     } else if (mgr.state === 'TRANSIT') {
@@ -2018,7 +2112,8 @@
       window.__rl = {
         mgr, transit, resolver, runtime: () => runtime, save,
         sample: (n) => resolver.sample(n, { originId: 'neon', difficultyId: 'normal', unlockedIds: save.unlocked }),
-        player: () => player, world: () => world, econ: () => economy
+        player: () => player, world: () => world, econ: () => economy,
+        combat: () => window.RLCombat, powerLog: () => window.RLPowerLog && window.RLPowerLog.snapshot()
       };
     }
     evaluateAchievements(null);

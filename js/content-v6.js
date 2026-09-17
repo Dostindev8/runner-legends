@@ -205,49 +205,50 @@
   /** Power catalog — 100% original IP (Ω.3 §6). */
   const POWERS = [
     {
-      id: 'flight', name: 'Vector Cero', icon: '▲', duration: 7, col: '#38bdf8',
+      id: 'flight', name: 'Vector Cero', icon: '▲', duration: 7, col: '#38bdf8', cost: 45,
       desc: 'Vuelo controlado. Atraviesa el suelo.', unlock: { type: 'base' }
     },
     {
-      id: 'ascended', name: 'Ascenso Estelar', icon: '✦', duration: 8, col: '#fbbf24',
-      desc: 'Velocidad +15% e iframes extendidos.', unlock: { type: 'characters', n: 2 }
+      id: 'ascended', name: 'Modo Guardián', icon: '✦', duration: 10, col: '#22d3ee', cost: 100,
+      desc: 'Armadura voltaica: velocidad ×1.45 y arrasa por contacto.', unlock: { type: 'base' }
     },
     {
-      id: 'voltz_sphere', name: 'Núcleo Espiral', icon: '◉', duration: 0.4, col: '#60a5fa',
-      desc: 'Carga y limpia el obstáculo más cercano.', unlock: { type: 'bosses', n: 1 }
+      id: 'voltz_sphere', name: 'Núcleo Espiral', icon: '◉', duration: 0.4, col: '#60a5fa', cost: 55,
+      desc: 'Carga y limpia el obstáculo más cercano.', unlock: { type: 'base' }
     },
     {
-      id: 'double_laser', name: 'Doble Haz', icon: '⇉', duration: 0.6, col: '#f43f5e',
-      desc: 'Dos disparos que aturden enemigos.', unlock: { type: 'worlds', n: 3 }
+      id: 'double_laser', name: 'Haz Ocular', icon: '⇉', duration: 2.4, col: '#ec4899', cost: 50,
+      desc: 'Dos haces oculares que atraviesan alineados.', unlock: { type: 'base' }
     },
     {
-      id: 'dance', name: 'Onda Dembow', icon: '♪', duration: 3.5, col: '#ec4899',
-      desc: 'Baile con onda. Invulnerable, sin salto.', unlock: { type: 'achievement', id: 'dist_400' }
+      id: 'dance', name: 'Onda Dembow', icon: '♪', duration: 3.5, col: '#ec4899', cost: 40,
+      desc: 'Baile con onda. Invulnerable, sin salto.', unlock: { type: 'base' }
     },
     {
-      id: 'invincible', name: 'Fiebre Neón', icon: '♥', duration: 8, col: '#a855f7',
-      desc: 'Inmune con tema musical corto.', unlock: { type: 'worlds', n: 4 }
+      id: 'invincible', name: 'Fiebre Neón', icon: '♥', duration: 8, col: '#a855f7', cost: 60,
+      desc: 'Inmune con tema musical corto.', unlock: { type: 'base' }
     },
     {
-      id: 'shadow', name: 'Fase Espectral', icon: '◐', duration: 8, col: '#94a3b8',
-      desc: 'Silueta translúcida, humo neón.', unlock: { type: 'worlds', n: 5 }
+      id: 'shadow', name: 'Fase Espectral', icon: '◐', duration: 8, col: '#94a3b8', cost: 45,
+      desc: 'Silueta translúcida, humo neón.', unlock: { type: 'base' }
     },
     {
-      id: 'bullet_time', name: 'Tiempo Ámbar', icon: '◷', duration: 5, col: '#f59e0b',
-      desc: 'El mundo se ralentiza, tú no.', unlock: { type: 'worlds', n: 6 }
+      id: 'bullet_time', name: 'Tiempo Ámbar', icon: '◷', duration: 5, col: '#f59e0b', cost: 50,
+      desc: 'El mundo se ralentiza, tú no.', unlock: { type: 'base' }
     },
     {
-      id: 'volt_storm', name: 'Tormenta de Voltios', icon: '⚡', duration: 4, col: '#22d3ee',
-      desc: 'Descargas en cadena a enemigos en pantalla.', unlock: { type: 'worlds', n: 7 }
+      id: 'volt_storm', name: 'Tormenta de Voltios', icon: '⚡', duration: 4, col: '#22d3ee', cost: 65,
+      desc: 'Descargas en cadena a enemigos en pantalla.', unlock: { type: 'base' }
     },
     {
-      id: 'colossus', name: 'Coloso Tectónico', icon: '▣', duration: 9, col: '#f97316',
-      desc: 'Escala y rompe todo por contacto.', unlock: { type: 'worlds', n: 8 }
+      id: 'colossus', name: 'Coloso Tectónico', icon: '▣', duration: 9, col: '#f97316', cost: 100,
+      desc: 'Escala y rompe todo por contacto.', unlock: { type: 'base' }
     }
   ];
 
-  /** Pure predicate over the existing save — no parallel quest system. */
+  /** Arsenal mode (default): all powers eligible. Campaign: honor unlock gates. */
   function isPowerUnlocked(power, save) {
+    if (!save || save.campaignMode !== true) return true;
     const u = power.unlock || { type: 'base' };
     if (u.type === 'base') return true;
     if (u.type === 'bosses') return (save.bossesDefeated || []).length >= u.n;

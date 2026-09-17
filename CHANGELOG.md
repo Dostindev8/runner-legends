@@ -1,5 +1,21 @@
 # Changelog
 
+## [v8.0] — 2026-09-16
+
+Arsenal desbloqueado: 10 poderes desde la primera partida, pisotón con cadena, haz ocular, Modo Guardián original LCS, PowerLog + physics-config v2.
+
+### Added
+- `js/combat-v8.js` pisotón (vy>120, rebote 720, cadena ≤8) y haces oculares.
+- `js/power-log.js` registro de carga para el anti-cheat.
+- `shared/physics-config.json` v2.0.0 bloque `powers` + `combat`.
+- Tests de envolvente de poderes en tournament-service (los originales se mantienen).
+
+### Changed
+- Kori deja de ser un rectángulo: silueta robótica con visor monocular y morfador de antebrazo.
+- Arsenal por defecto (campaignMode opcional).
+- Valle Dorado: cielo más oscuro y ventanas para que el parallax no se lave en ámbar.
+- ctx.filter / composite se resetean al inicio de cada frame.
+
 ## [v7.0] — 2026-09-16
 
 Zoom de cámara en móvil, intro/HUD más grandes, 90 frases por voz y gaps más justos. Vanilla JS extendido (no React/TS).

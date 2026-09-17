@@ -120,12 +120,19 @@
     choose(id) {
       const p = this.list().find((x) => x.id === id);
       if (!p) return;
+      if (this.active) return;
       const save = this.api.getSave();
       const C = global.RLContentV6;
       if (C && C.isPowerUnlocked && !C.isPowerUnlocked(p, save)) return;
-      this._closeSelector();
       const eco = this.api.getEconomy();
-      if (eco) eco.super = 0;
+      const cost = Math.max(0.1, (p.cost || 100) / 100);
+      if (!eco || eco.super < cost - 0.001) return;
+      this._closeSelector();
+      eco.super = Math.max(0, eco.super - cost);
+      if (global.RLPowerLog) {
+        global.RLPowerLog.record(p.id, Date.now(), p.cost || 100);
+        global.RLPowerLog.addGenerated(0);
+      }
       this.activate(p);
     },
 
@@ -137,7 +144,7 @@
       // Keep the exact runtime object we mutated: a portal can swap runtime mid-power.
       this._saved = { rt, gravityMul: rt.gravityMul, speedMul: rt.speedMul };
       if (p.id === 'flight') rt.gravityMul = rt.gravityMul * 0.08;
-      if (p.id === 'ascended') rt.speedMul = rt.speedMul * 1.15;
+      if (p.id === 'ascended') rt.speedMul = rt.speedMul * 1.45;
       if (p.id === 'invincible' || p.id === 'ascended' || p.id === 'colossus') player.iframe = Math.max(player.iframe, p.duration);
       if (player) player.superGlow = 1.4;
       if (fx.burst) fx.burst(p.col);
@@ -187,6 +194,7 @@
         this._saved = null;
       }
       this.active = null; this.timeLeft = 0; this.stage = 0; this.charge = 0;
+      if (global.RLPowerLog) global.RLPowerLog.closeLast(Date.now());
       if (fx.toast) fx.toast(p.name.toUpperCase() + ' AGOTADO');
     },
 
@@ -201,7 +209,7 @@
     isPaused() { return this.open; },
     freeFlight() { return !!(this.active && this.active.id === 'flight'); },
     jumpLocked() { return !!(this.active && this.active.id === 'dance'); },
-    worldSpeedMul() { return (this.active && this.active.id === 'bullet_time') ? 0.5 : 1; },
+    worldSpeedMul() { return (this.active && this.active.id === 'bullet_time') ? 0.35 : 1; },
     alphaMul() { return (this.active && this.active.id === 'shadow') ? 0.45 : 1; },
     label() {
       if (!this.active) return '';
