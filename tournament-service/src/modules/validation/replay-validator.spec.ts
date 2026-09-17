@@ -97,4 +97,56 @@ describe('validateReplay (anti-cheat)', () => {
       expect(profile.jumpBufferMs).toBeGreaterThanOrEqual(COYOTE_TIME_FLOOR_MS);
     }
   });
+
+  const ALL_POWERS = [
+    'VECTOR_CERO', 'MODO_GUARDIAN', 'HAZ_OCULAR', 'NUCLEO_ESPIRAL',
+    'FIEBRE_NEON', 'ONDA_DEMBOW', 'TIEMPO_AMBAR', 'TORMENTA_VOLTIOS',
+    'FASE_ESPECTRAL', 'EXPLOSION_ESTELAR',
+  ];
+
+  it.each(ALL_POWERS)('accepts a legitimate run with power %s', (powerId) => {
+    expect(
+      validateReplay({
+        ...base,
+        powerLog: [{ powerId, startMs: 1000, endMs: 2000, chargeConsumed: 40 }],
+      }).valid,
+    ).toBe(true);
+  });
+
+  it('rejects a power log whose charge exceeds generable envelope', () => {
+    expect(
+      validateReplay({
+        ...base,
+        coinsCollected: 0,
+        distanceMeters: 50,
+        durationMs: 60_000,
+        powerLog: [{ powerId: 'MODO_GUARDIAN', startMs: 0, endMs: 1000, chargeConsumed: 50_000 }],
+      }).reason,
+    ).toBe('power-charge-mismatch');
+  });
+
+  it('rejects speed above the declared power envelope', () => {
+    expect(
+      validateReplay({
+        ...base,
+        durationMs: 25_000,
+        distanceMeters: 900,
+        powerLog: [{ powerId: 'HAZ_OCULAR', startMs: 0, endMs: 400, chargeConsumed: 10 }],
+      }).reason,
+    ).toBe('speed-exceeded');
+  });
+
+  it('rejects unknown power ids', () => {
+    expect(
+      validateReplay({
+        ...base,
+        powerLog: [{ powerId: 'NOT_A_POWER', startMs: 0, endMs: 10, chargeConsumed: 1 }],
+      }).reason,
+    ).toBe('power-unknown');
+  });
+
+  it('rejects chained stomps above the combat cap', () => {
+    expect(validateReplay({ ...base, chainedStompsMax: 9 }).reason).toBe('stomp-chain-exceeded');
+    expect(validateReplay({ ...base, chainedStompsMax: 8 }).valid).toBe(true);
+  });
 });

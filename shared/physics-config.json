@@ -1,6 +1,6 @@
 {
   "_comment": "Single source of truth for physics constants shared by the Unity client and the tournament anti-cheat. Bump 'version' whenever any value changes; both sides validate that their configVersion matches on every replay submission (GDD 3.5 / prompt §6). A build step should generate PhysicsConfig.cs (Unity) and physics-config.ts (server) from this file.",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "characters": {
     "kori_voltz":  { "baseMaxSpeed": 11.0 },
     "shino_kage":  { "baseMaxSpeed": 14.0 },
@@ -15,5 +15,36 @@
     "speedMargin": 1.05,
     "coinMargin": 1.05,
     "maxInputsPerSecond": 20
+  },
+  "powers": {
+    "VECTOR_CERO":      { "maxSpeedMult": 1.00, "maxAltitudePx": 470, "invuln": "obstacles", "maxDurationMs": 7000,  "cost": 45 },
+    "MODO_GUARDIAN":    { "maxSpeedMult": 1.45, "maxAltitudePx": 210, "invuln": "common",    "maxDurationMs": 10000, "cost": 100 },
+    "HAZ_OCULAR":       { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 2400,  "cost": 50 },
+    "NUCLEO_ESPIRAL":   { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 0,     "cost": 55 },
+    "FIEBRE_NEON":      { "maxSpeedMult": 1.20, "maxAltitudePx": 210, "invuln": "all",       "maxDurationMs": 8000,  "cost": 60 },
+    "ONDA_DEMBOW":      { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "all",       "maxDurationMs": 3500,  "cost": 40 },
+    "TIEMPO_AMBAR":     { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 5000,  "cost": 50, "worldTimeScale": 0.35 },
+    "TORMENTA_VOLTIOS": { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 4000,  "cost": 65 },
+    "FASE_ESPECTRAL":   { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "partial",   "maxDurationMs": 6000,  "cost": 45 },
+    "EXPLOSION_ESTELAR":{ "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 0,     "cost": 100 }
+  },
+  "combat": {
+    "stompBounceVelocity": 720,
+    "stompMaxChainBonus": 3,
+    "stompChainMultiplier": 1.12,
+    "maxChainedStomps": 8
+  },
+  "powerAliases": {
+    "flight": "VECTOR_CERO",
+    "ascended": "MODO_GUARDIAN",
+    "double_laser": "HAZ_OCULAR",
+    "voltz_sphere": "NUCLEO_ESPIRAL",
+    "invincible": "FIEBRE_NEON",
+    "dance": "ONDA_DEMBOW",
+    "bullet_time": "TIEMPO_AMBAR",
+    "volt_storm": "TORMENTA_VOLTIOS",
+    "shadow": "FASE_ESPECTRAL",
+    "colossus": "MODO_GUARDIAN",
+    "super": "EXPLOSION_ESTELAR"
   }
 }

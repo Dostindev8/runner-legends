@@ -1,0 +1,20 @@
+name: Web Slice
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Auditoría de IP
+        run: |
+          if grep -rilE 'goku|saiyan|rasengan|naruto|chakra|power ranger|morphin|megazord' \
+            --include='*.js' --include='*.html' --include='*.json' --include='*.md' . ; then
+            echo "::error::Coincidencia de IP externa detectada"
+            exit 1
+          fi
+          echo "IP audit clean"
+      - name: JSON physics-config
+        run: node -e "JSON.parse(require('fs').readFileSync('shared/physics-config.json','utf8'))"
