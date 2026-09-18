@@ -1,5 +1,17 @@
 # Changelog
 
+## [v8.2] — 2026-09-17
+
+El tramo tiene cierre: 8 KO, 250 m o jefe. El pisotón ahora registra daño (vy>50, ventana de pies amplia) y la barra de HP se ve siempre. Tres SÚPER derriban al jefe; el resto se elimina a pisotones.
+
+### Added
+- Chip de objetivo KO x/8, pantalla de resultados DISTRITO SUPERADO, logros Barrido / Tramo cerrado / Cazador de jefes.
+- Números de daño (`-N`) aunque no haya haz ocular.
+
+### Changed
+- HP de tropa 2–4; jefes 6–9 (Escuadrón Cero ×2). SÚPER golpea al jefe aunque no haya drones en pantalla.
+- Desbloqueo del siguiente mundo al cerrar el tramo (no solo al matar jefe).
+
 ## [v8.1] — 2026-09-16
 
 Bestiario 2–3 enemigos por mundo, daño/stun/slow según poder, telegraph, `?qa` selftest. ISO 25010: jugabilidad, fiabilidad del freeze, mantenibilidad por módulos.

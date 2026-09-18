@@ -9,7 +9,7 @@
   const BOSSES = {
     neon: {
       id: 'overclock', name: 'Overclock', worldId: 'neon',
-      hp: 8, w: 70, h: 90, color: '#22e6ff', accent: '#ff2bd6',
+      hp: 6, w: 70, h: 90, color: '#22e6ff', accent: '#ff2bd6',
       essence: 'esencia_overclock',
       patterns: [
         { id: 'pulse', telegraph: 0.55, active: 0.45, recovery: 0.5, dmg: 1 },
@@ -18,7 +18,7 @@
     },
     golden: {
       id: 'don_ferrocode', name: 'Don Ferrocode', worldId: 'golden',
-      hp: 9, w: 78, h: 86, color: '#ffd24a', accent: '#c88810',
+      hp: 6, w: 78, h: 86, color: '#ffd24a', accent: '#c88810',
       essence: 'esencia_ferrocode',
       patterns: [
         { id: 'slam', telegraph: 0.65, active: 0.4, recovery: 0.6, dmg: 1 },
@@ -27,7 +27,7 @@
     },
     ice: {
       id: 'glacia', name: 'Glacia', worldId: 'ice',
-      hp: 9, w: 72, h: 88, color: '#9ff0ff', accent: '#7ab8ff',
+      hp: 6, w: 72, h: 88, color: '#9ff0ff', accent: '#7ab8ff',
       essence: 'esencia_glacia',
       patterns: [
         { id: 'shard', telegraph: 0.6, active: 0.35, recovery: 0.55, dmg: 1 },
@@ -36,7 +36,7 @@
     },
     coliseum: {
       id: 'rivalis', name: 'Rivalis', worldId: 'coliseum',
-      hp: 10, w: 68, h: 84, color: '#ffb060', accent: '#ff6040',
+      hp: 7, w: 68, h: 84, color: '#ffb060', accent: '#ff6040',
       essence: 'esencia_rivalis',
       patterns: [
         { id: 'dash', telegraph: 0.5, active: 0.3, recovery: 0.45, dmg: 1 },
@@ -45,7 +45,7 @@
     },
     abyssal: {
       id: 'kraxo', name: 'Kraxo', worldId: 'abyssal',
-      hp: 10, w: 80, h: 70, color: '#40e0c0', accent: '#2060a0',
+      hp: 7, w: 80, h: 70, color: '#40e0c0', accent: '#2060a0',
       essence: 'esencia_kraxo',
       patterns: [
         { id: 'tentacle', telegraph: 0.7, active: 0.45, recovery: 0.55, dmg: 1 },
@@ -54,7 +54,7 @@
     },
     celestial: {
       id: 'auros', name: 'Auros', worldId: 'celestial',
-      hp: 11, w: 74, h: 92, color: '#ffe08a', accent: '#a070ff',
+      hp: 7, w: 74, h: 92, color: '#ffe08a', accent: '#a070ff',
       essence: 'esencia_auros',
       patterns: [
         { id: 'beam', telegraph: 0.8, active: 0.4, recovery: 0.6, dmg: 1 },
@@ -63,7 +63,7 @@
     },
     quantum: {
       id: 'fractal', name: 'Fractal', worldId: 'quantum',
-      hp: 11, w: 76, h: 76, color: '#c080ff', accent: '#40ffe0',
+      hp: 8, w: 76, h: 76, color: '#c080ff', accent: '#40ffe0',
       essence: 'esencia_fractal',
       patterns: [
         { id: 'split', telegraph: 0.7, active: 0.4, recovery: 0.55, dmg: 1 },
@@ -72,7 +72,7 @@
     },
     igneous: {
       id: 'magma_rex', name: 'Magma Rex', worldId: 'igneous',
-      hp: 12, w: 88, h: 96, color: '#ff6030', accent: '#ffd24a',
+      hp: 8, w: 88, h: 96, color: '#ff6030', accent: '#ffd24a',
       essence: 'esencia_magma',
       patterns: [
         { id: 'erupt', telegraph: 0.75, active: 0.5, recovery: 0.55, dmg: 1 },
@@ -81,7 +81,7 @@
     },
     fractal: {
       id: 'null', name: 'Null', worldId: 'fractal',
-      hp: 12, w: 70, h: 100, color: '#a0a8c0', accent: '#ff2bd6',
+      hp: 8, w: 70, h: 100, color: '#a0a8c0', accent: '#ff2bd6',
       essence: 'esencia_null',
       patterns: [
         { id: 'void', telegraph: 0.8, active: 0.4, recovery: 0.6, dmg: 1 },
@@ -90,9 +90,9 @@
     },
     final: {
       id: 'escuadron_cero', name: 'Escuadrón Cero', worldId: 'final',
-      hp: 16, w: 64, h: 64, color: '#eaf6ff', accent: '#ff2bd6',
+      hp: 9, w: 64, h: 64, color: '#eaf6ff', accent: '#ff2bd6',
       essence: 'esencia_cero',
-      squad: 4,
+      squad: 2,
       patterns: [
         { id: 'volley', telegraph: 0.6, active: 0.4, recovery: 0.45, dmg: 1 },
         { id: 'encircle', telegraph: 0.9, active: 0.5, recovery: 0.55, dmg: 1 }

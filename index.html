@@ -338,7 +338,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
         <div class="title-block">
           <div class="crown" aria-hidden="true">◆</div>
           <div class="title-lg">RUNNER<br/>LEGENDS</div>
-          <div class="sub">DISTRITO NEÓN · V8.1</div>
+          <div class="sub">DISTRITO NEÓN · V8.2</div>
         </div>
 
         <div class="glass char-card">
@@ -363,6 +363,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
             <button type="button" class="diff-btn" data-diff="legendary" disabled title="Completa Experto con 3★">Legendario</button>
           </div>
           <div class="diff-hint" id="diffHint">Coyote 100ms · recompensa ×1.0</div>
+          <div class="diff-hint">Objetivo: pisa enemigos (barra de vida) · 8 KO, 250 m o derrota al jefe · el siguiente mundo se desbloquea. Los poderes son opcionales (≤3 SÚPER basta).</div>
           <div class="world-label">MUNDO DE ORIGEN</div>
           <div class="world-grid" id="worldGrid" aria-label="Mundos"></div>
         </div>
@@ -402,6 +403,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
       <span class="chip" id="ruleChip">⚡</span>
       <span class="chip gold" id="comboChip" hidden>COMBO ×0</span>
       <span class="chip cyan" id="powerChip" hidden>—</span>
+      <span class="chip gold" id="objChip">KO 0/8</span>
     </div>
     <div class="super-wrap">
       <div class="super-label">EXPLOSIÓN ESTELAR</div>
@@ -421,9 +423,11 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 
   <div id="results" class="layer hidden">
     <div class="panel">
-      <div class="title-lg">CARRERA<br/>TERMINADA</div>
+      <div class="title-lg" id="rTitle">CARRERA<br/>TERMINADA</div>
       <div class="stars" id="stars">★★★</div>
+      <div class="metric" id="rStatus">Completa el tramo para desbloquear el siguiente mundo</div>
       <div class="metric"><b>Distancia</b> <span id="rDist">0</span> m</div>
+      <div class="metric"><b>Derribos</b> <span id="rKills">0</span></div>
       <div class="metric"><b>Monedas</b> <span id="rCoins">0</span></div>
       <div class="metric"><b>Combo máx</b> <span id="rCombo">0</span></div>
       <div class="metric"><b>Dificultad</b> <span id="rDiff">Normal</span></div>

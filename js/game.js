@@ -24,7 +24,8 @@
     iframes: 1.1, maxHP: 3,
     superChargePerCoin: 0.012, superChargePerSec: 1 / 40,
     portalAt: 220, comboWindow: 1.65,
-    spawnGrace: 3.0, postPowerGrace: 1.2
+    spawnGrace: 3.0, postPowerGrace: 1.2,
+    stageKills: 8, stageDist: 250, bossAt: 130
   };
 
   const DIFF = {
@@ -49,7 +50,10 @@
     { id: 'portal_3', icon: '🌀', label: 'Saltador dimensional', desc: 'Cruza 3 portales en total' },
     { id: 'worlds_3', icon: '🗺️', label: 'Explorador', desc: 'Desbloquea 3 mundos' },
     { id: 'super_1', icon: '💥', label: 'Explosión Estelar', desc: 'Activa el súper al menos una vez' },
-    { id: 'rich_200', icon: '◎', label: 'Bóveda Neón', desc: 'Acumula 200 monedas totales' }
+    { id: 'rich_200', icon: '◎', label: 'Bóveda Neón', desc: 'Acumula 200 monedas totales' },
+    { id: 'kills_8', icon: '⚔', label: 'Barrido', desc: 'Elimina 8 enemigos en un tramo' },
+    { id: 'stage_win', icon: '🏁', label: 'Tramo cerrado', desc: 'Cierra un distrito: jefe, 8 KO o 250 m' },
+    { id: 'boss_1', icon: '👑', label: 'Cazador de jefes', desc: 'Derrota a un jefe de distrito' }
   ];
 
   let activeDiff = DIFF.normal;
@@ -190,6 +194,9 @@
     if (save.unlocked.length >= 3) grantAchievement('worlds_3');
     if (save.supers >= 1) grantAchievement('super_1');
     if (save.coins >= 200) grantAchievement('rich_200');
+    if (run && run.kills >= 8) grantAchievement('kills_8');
+    if (run && run.cleared) grantAchievement('stage_win');
+    if ((save.bossesDefeated || []).length >= 1) grantAchievement('boss_1');
   }
 
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -204,6 +211,35 @@
     economy.super = Math.min(1, economy.super + 0.06);
     economy.coins += Math.round(3 * activeDiff.reward);
     shake.add(0.28);
+    if (world) world.kills = (world.kills || 0) + 1;
+    audio.coin();
+  }
+
+  function unlockNextWorld(fromId) {
+    const order = WORLDS.map((w) => w.id);
+    const idx = order.indexOf(fromId);
+    if (idx < 0 || idx >= order.length - 1) return null;
+    const next = order[idx + 1];
+    if (!save.unlocked.includes(next)) {
+      save.unlocked.push(next);
+      flashToast('DESBLOQUEADO · ' + getWorld(next).name.toUpperCase());
+      persist();
+      return next;
+    }
+    return null;
+  }
+
+  function tryUnlockPilot(essence) {
+    const C = window.RLContentV6;
+    if (!C || !C.CHARACTERS || !essence) return;
+    if (!save.characters) save.characters = ['kori'];
+    for (let i = 0; i < C.CHARACTERS.length; i++) {
+      const ch = C.CHARACTERS[i];
+      if (ch.essence === essence && save.characters.indexOf(ch.id) < 0) {
+        save.characters.push(ch.id);
+        flashToast('PILOTO · ' + ch.name.toUpperCase());
+      }
+    }
   }
 
   class ObjectPool {
@@ -735,10 +771,11 @@
       if (!C) return;
       const def = C.getBoss(worldId);
       if (!def) return;
-      if (save.bossesDefeated && save.bossesDefeated.includes(def.id)) return;
       this.clear();
       this.active = true; this.def = def;
-      this.maxHp = def.hp; this.hp = def.hp;
+      this.replay = !!(save.bossesDefeated && save.bossesDefeated.includes(def.id));
+      this.maxHp = this.replay ? Math.max(4, Math.floor(def.hp * 0.65)) : def.hp;
+      this.hp = this.maxHp;
       this.w = def.w; this.h = def.h;
       this.x = view.w + 120; this.y = view.groundY - this.h;
       this.phase = 'enter'; this.t = 0; this.patIdx = 0; this.aliveTime = 0;
@@ -790,10 +827,10 @@
       return false;
     }
     hitByStomp() {
-      if (!this.active || this.invuln > 0 || this.phase === 'telegraph') return;
-      // Safe window: stomp only during idle/recover (player agency)
-      if (this.phase !== 'idle' && this.phase !== 'recover') return;
-      this.hp -= 1; this.invuln = 0.35;
+      if (!this.active || this.invuln > 0) return;
+      if (this.phase === 'attack') return;
+      this.hp -= 1; this.invuln = 0.28;
+      if (window.RLCombat) window.RLCombat.pop(this.x, this.y - 10, '-1', '#ffd24a');
       particles.burst(this.x, this.y, 12, { col: this.def.color, spMax: 180 });
       audio.bossHit();
       if (this.hp <= 0) this.defeat();
@@ -810,19 +847,14 @@
       particles.burst(this.x, this.y + this.h * 0.3, 50, { col: def.accent, spMax: 420, up: 100 });
       audio.bossDown();
       flashToast('DERROTADO · ' + def.name.toUpperCase());
-      if (!save.bossesDefeated) save.bossesDefeated = [];
-      if (!save.bossesDefeated.includes(def.id)) save.bossesDefeated.push(def.id);
-      if (!save.essences) save.essences = {};
-      save.essences[def.essence] = (save.essences[def.essence] || 0) + 1;
-      // Unlock next world
-      const order = WORLDS.map((w) => w.id);
-      const idx = order.indexOf(def.worldId);
-      if (idx >= 0 && idx < order.length - 1) {
-        const next = order[idx + 1];
-        if (!save.unlocked.includes(next)) {
-          save.unlocked.push(next);
-          flashToast('DESBLOQUEADO · ' + getWorld(next).name);
-        }
+      if (world) world.bossDown = true;
+      if (!this.replay) {
+        if (!save.bossesDefeated) save.bossesDefeated = [];
+        if (!save.bossesDefeated.includes(def.id)) save.bossesDefeated.push(def.id);
+        if (!save.essences) save.essences = {};
+        save.essences[def.essence] = (save.essences[def.essence] || 0) + 1;
+        tryUnlockPilot(def.essence);
+        unlockNextWorld(def.worldId);
       }
       if (save.unlocked.length >= 9 && !save.unlocked.includes('final')) save.unlocked.push('final');
       persist(); refreshMenuUI();
@@ -885,6 +917,7 @@
       this.portalSpawned = false; this.segmentDist = 0;
       this.fragSpawned = 0; this.memSpawned = 0; this.bossArmed = false;
       this.aliveT = 0; this.spawnLock = 0;
+      this.kills = 0; this.bossDown = false; this.cleared = false;
     }
     groundAt(x) {
       let ok = true;
@@ -908,11 +941,11 @@
       // Ω.3: +40% base spacing, floored by what is physically jumpable at this speed.
       const gap = (min, max, extra) =>
         view.w + 40 + (extra || 0) + Math.max(rand(min, max) * gapMul * 1.4, minSafeGap(this.speed));
-      if (r < 0.28) {
+      if (r < 0.22) {
         const w = rand(90, 160); this.holes.spawn((h) => { h.x = view.w + 40; h.w = w; });
         this._spawnCoinArc(view.w + 40 + w * 0.2, gY - 30, 4);
         this.nextGap = gap(240, 360, w);
-      } else if (r < 0.55) {
+      } else if (r < 0.42) {
         const h = rand(34, 58);
         this.crates.spawn((c) => {
           c.x = view.w + 40; c.y = gY - h; c.w = 44; c.h = h;
@@ -920,7 +953,7 @@
         });
         this._spawnCoinArc(view.w + 18, gY - h - 70, 5);
         this.nextGap = gap(240, 340);
-      } else if (r < 0.78) {
+      } else if (r < 0.86) {
         const En = window.RLEnemies;
         const spec = En ? En.pick(runtime.worldId, activeDiff.id) : null;
         this.drones.spawn((d) => {
@@ -994,7 +1027,7 @@
           m.x = view.w + 50; m.y = view.groundY - rand(60, 130); m.taken = false; m.ph = 0; m.lore = lore;
         });
       }
-      if (!this.bossArmed && this.segmentDist > 140) {
+      if (!this.bossArmed && this.segmentDist > CFG.bossAt) {
         this.bossArmed = true;
         this.boss.spawn(runtime.worldId, view);
       }
@@ -1015,6 +1048,8 @@
       this.holes.forEach((o) => { if (o.x + o.w < -40) o.alive = false; }); this.holes.sweep();
       this.portals.forEach((o) => { if (o.x < -80) o.alive = false; }); this.portals.sweep();
       this._collisions(player);
+      this.drones.sweep();
+      this.crates.sweep();
       return dx;
     }
     _collisions(p) {
@@ -1028,15 +1063,17 @@
             o.alive = false;
             clock.freeze(0.07);
             shake.add(0.35);
+            if (C.pop) C.pop(o.x + o.w / 2, o.y, 'KO', '#22d3ee');
             particles.burst(o.x + o.w / 2, o.y, 18, { col: '#22d3ee', spMax: 280, lifeMax: 0.45 });
             economy.combo++; economy.super = Math.min(1, economy.super + 0.08);
             if (economy.addCoin && r.scoreMul) economy.coins += Math.round(2 * r.scoreMul);
-          } else if (pr.y + pr.h - o.y < 18 && p.vy >= 0) { p.y = o.y - p.h; p.vy = 0; p.onGround = true; }
+          } else if (pr.y + pr.h - o.y < 28 && p.vy >= 0) { p.y = o.y - p.h; p.vy = 0; p.onGround = true; }
           else if (guardian) { o.alive = false; particles.burst(o.x, o.y, 12, { col: '#22d3ee', spMax: 220 }); }
           else p.hurt();
         }
       });
       this.drones.forEach((o) => {
+        if (!o.alive) return;
         const top = o.y - o.h / 2;
         const hit = { x: o.x - o.w / 2, y: top, w: o.w, h: o.h };
         if (!aabb(pr, hit)) return;
@@ -1045,9 +1082,9 @@
         if (C && o.stompable !== false && C.isStomp(p, top)) {
           C.bounce(p);
           clock.freeze(0.07);
-          const dead = C.damageEnemy(o, guardian ? 250 : 100);
+          const dead = C.damageEnemy(o, guardian ? 2 : 1);
           if (dead) rewardFoe(o, '#22d3ee');
-          else { o.flash = 0.08; shake.add(0.2); }
+          else { o.flash = 0.12; shake.add(0.2); }
         } else if (guardian) {
           const dead = C && C.powerAgainst(o, powers.active.id);
           if (dead) rewardFoe(o, '#22d3ee');
@@ -1085,8 +1122,11 @@
         }
       });
       if (this.boss.active && aabb(pr, this.boss.rect())) {
-        if (pr.y + pr.h - this.boss.y < 22 && p.vy >= 0) {
-          p.y = this.boss.y - p.h; p.vy = CFG.jumpVel * 0.55; this.boss.hitByStomp();
+        const bTop = this.boss.y;
+        if (C && C.isStomp(p, bTop)) {
+          C.bounce(p);
+          clock.freeze(0.07);
+          this.boss.hitByStomp();
         } else if (this.boss.phase === 'attack') p.hurt();
       }
       this.portals.forEach((o) => {
@@ -1384,7 +1424,7 @@
         if (dead) rewardFoe(o, col);
         n++;
       }
-      if (world.boss && world.boss.active && n > 0) world.boss.hitBySuper();
+      if (world.boss && world.boss.active && (prof.dmg || 0) > 0) world.boss.hitBySuper();
       if (n === 0) {
         const tx = view.w * 0.78, ty = view.groundY - 80;
         C.fireHaz(player.x + 18, player.y + 22, tx, ty, col);
@@ -1399,13 +1439,21 @@
 
   function showResults() {
     const d = Math.round(world.dist), c = economy.coins, mc = economy.maxCombo;
-    const stars = d > 600 ? 3 : d > 300 ? 2 : 1;
+    const kills = world.kills || 0;
+    const cleared = !!(world.bossDown || kills >= CFG.stageKills || d >= CFG.stageDist);
+    world.cleared = cleared;
+    if (cleared) unlockNextWorld(runtime.worldId);
+    const stars = cleared ? (d > 500 || world.bossDown ? 3 : d > 280 ? 2 : 1) : (d > 400 ? 2 : 1);
+    const title = $('rTitle');
+    if (title) title.innerHTML = cleared ? 'DISTRITO<br/>SUPERADO' : 'CARRERA<br/>TERMINADA';
     $('stars').textContent = ['★', '★', '★'].map((s, i) => (i < stars ? '★' : '☆')).join(' ');
     $('rDist').textContent = d; $('rCoins').textContent = c; $('rCombo').textContent = mc;
     $('rDiff').textContent = activeDiff.label;
     $('rWorld').textContent = runtime.world.name + ' · ' + runtime.weather.label;
+    const rk = $('rKills'); if (rk) rk.textContent = String(kills);
+    const rs = $('rStatus'); if (rs) rs.textContent = cleared ? 'Tramo cerrado · mundo siguiente disponible' : 'Cae o llega a ' + CFG.stageDist + ' m / ' + CFG.stageKills + ' KO';
     save.coins += c;
-    save.xp += Math.round(d / 10 + c * 2 + mc);
+    save.xp += Math.round(d / 10 + c * 2 + mc + kills * 4 + (cleared ? 40 : 0));
     save.bestDist = Math.max(save.bestDist || 0, d);
     save.bestCombo = Math.max(save.bestCombo || 0, mc);
     save.runs = (save.runs || 0) + 1;
@@ -1417,14 +1465,11 @@
       const btn = document.querySelector('[data-diff="legendary"]');
       if (btn) { btn.disabled = false; btn.title = 'Desbloqueado'; }
     }
-    // Unlock next world primarily via boss defeat (Fase 5). Stars still grant XP bonus only.
-    const order = WORLDS.map((w) => w.id);
-    void order; void stars;
     if (save.unlocked.length >= 9 && !save.unlocked.includes('final') && (save.bossesDefeated || []).length >= 9) {
       save.unlocked.push('final');
     }
     persist();
-    evaluateAchievements({ dist: d, combo: mc });
+    evaluateAchievements({ dist: d, combo: mc, kills: kills, cleared: cleared });
     refreshMenuUI();
   }
 
@@ -1452,6 +1497,13 @@
         cc.hidden = false;
         cc.textContent = 'COMBO ×' + economy.combo;
       } else cc.hidden = true;
+    }
+    const oc = $('objChip');
+    if (oc) {
+      oc.hidden = false;
+      const need = CFG.stageKills;
+      const k = world.kills || 0;
+      oc.textContent = world.bossDown ? 'JEFE KO' : ('KO ' + k + '/' + need);
     }
     const pc = $('powerChip');
     if (pc) {
@@ -1500,7 +1552,7 @@
       ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8;
       ctx.fillRect(o.x - 5, cy - 3, 10, 5);
       ctx.shadowBlur = 0;
-      if (!player.onGround && player.vy > 120 && o.stompable !== false) {
+      if (!player.onGround && player.vy > 50 && o.stompable !== false) {
         ctx.strokeStyle = 'rgba(34,211,238,0.85)';
         ctx.lineWidth = 2;
         ctx.globalAlpha = 0.5 + Math.sin(performance.now() * 0.018) * 0.35;
@@ -1510,12 +1562,10 @@
         ctx.stroke();
         ctx.globalAlpha = 1;
       }
-      if ((o.maxHp || 1) > 1) {
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(o.x - 16, cy - o.h / 2 - 8, 32, 4);
-        ctx.fillStyle = col;
-        ctx.fillRect(o.x - 16, cy - o.h / 2 - 8, 32 * clamp((o.hp || 1) / (o.maxHp || 1), 0, 1), 4);
-      }
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(o.x - 18, cy - o.h / 2 - 10, 36, 5);
+      ctx.fillStyle = '#22d3ee';
+      ctx.fillRect(o.x - 18, cy - o.h / 2 - 10, 36 * clamp(Math.max(0, o.hp || 0) / Math.max(1, o.maxHp || 1), 0, 1), 5);
       ctx.strokeStyle = 'rgba(160,220,255,0.45)';
       ctx.beginPath(); ctx.ellipse(o.x, cy, o.w / 2, o.h / 2, 0, 0, 6.283); ctx.stroke();
     });
@@ -2203,7 +2253,7 @@
           dummy.hp = 1; dummy.alive = true;
           r.push({ id: 'laser-kills', pass: C.powerAgainst(dummy, 'double_laser') === true });
           r.push({ id: 'bestiary-10', pass: E && Object.keys(E.BY_WORLD).length === 10 });
-          r.push({ id: 'stomp-falling', pass: C.isStomp({ dead: false, vy: 200, y: 10, h: 20 }, 40) === true });
+          r.push({ id: 'stomp-falling', pass: C.isStomp({ dead: false, vy: 80, y: 10, h: 40 }, 42) === true });
           r.push({ id: 'stomp-rising', pass: C.isStomp({ dead: false, vy: -10, y: 10, h: 20 }, 40) === false });
           r.push({ id: 'one-power', pass: !!(window.RLPowers && window.RLPowers.active === null || true) });
           return { pass: r.every((x) => x.pass), cases: r };

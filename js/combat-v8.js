@@ -5,8 +5,8 @@
 (function (global) {
   'use strict';
 
-  const STOMP_VY = 120;
-  const STOMP_TOP = 18;
+  const STOMP_VY = 50;
+  const STOMP_TOP = 56;
   const BOUNCE = 720;
   const CHAIN_BONUS_CAP = 3;
   const CHAIN_MULT = 1.12;
@@ -15,12 +15,14 @@
   const combat = {
     chain: 0,
     beams: [],
+    pops: [],
     maxBeams: 8,
     chargeSpent: 0,
 
     reset() {
       this.chain = 0;
       this.beams.length = 0;
+      this.pops.length = 0;
       this.chargeSpent = 0;
     },
 
@@ -30,7 +32,8 @@
       if (!player || player.dead) return false;
       if (player.vy <= STOMP_VY) return false;
       const feet = player.y + player.h;
-      return feet < enemyTop + STOMP_TOP;
+      const pen = feet - enemyTop;
+      return pen >= -10 && pen <= STOMP_TOP;
     },
 
     bounce(player) {
@@ -55,11 +58,18 @@
 
     damageEnemy(o, amount) {
       if (!o || !o.alive || o.immortal) return false;
+      const dmg = Math.max(1, amount | 0);
       const hp = o.hp == null ? 1 : o.hp;
-      o.hp = hp - amount;
-      o.flash = 0.06;
+      o.hp = hp - dmg;
+      o.flash = 0.12;
+      this.pop(o.x, (o.y || 0) - 18, '-' + dmg, '#fff');
       if (o.hp <= 0) { o.alive = false; return true; }
       return false;
+    },
+
+    pop(x, y, text, col) {
+      if (this.pops.length >= 16) this.pops.shift();
+      this.pops.push({ x: x, y: y, text: String(text), col: col || '#ffffff', life: 0.55 });
     },
 
     weaken(o, stun, slow) {
@@ -81,10 +91,15 @@
         this.beams[i].life -= dt;
         if (this.beams[i].life <= 0) this.beams.splice(i, 1);
       }
+      for (let i = this.pops.length - 1; i >= 0; i--) {
+        this.pops[i].life -= dt;
+        this.pops[i].y -= 40 * dt;
+        if (this.pops[i].life <= 0) this.pops.splice(i, 1);
+      }
     },
 
     draw(ctx) {
-      if (!this.beams.length) return;
+      if (this.beams.length) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < this.beams.length; i++) {
@@ -107,6 +122,19 @@
         ctx.stroke();
       }
       ctx.restore();
+      }
+      if (this.pops.length) {
+        ctx.save();
+        ctx.font = '700 14px Rajdhani,sans-serif';
+        ctx.textAlign = 'center';
+        for (let i = 0; i < this.pops.length; i++) {
+          const p = this.pops[i];
+          ctx.globalAlpha = Math.max(0, p.life / 0.55);
+          ctx.fillStyle = p.col;
+          ctx.fillText(p.text, p.x, p.y);
+        }
+        ctx.restore();
+      }
     }
   };
 
