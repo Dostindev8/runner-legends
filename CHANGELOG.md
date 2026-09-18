@@ -1,5 +1,19 @@
 # Changelog
 
+## [v8.6] — 2026-09-17
+
+Cada poder tiene firma propia (daño, VFX, SFX). Nuevo especial **Bate de Carga**: Kori bateá desde un camión de circuito LCS (telegrafía 450ms). Explosión Estelar no se tocó.
+
+### Added
+- `js/power-fx.js` (camión + bate + láseres/ondas/escudo únicos).
+- Poder `freight_bat`. Fiebre Neón ahora es imán de monedas (0 daño).
+
+### Changed
+- Guardián ≠ Coloso (contacto cian vs pisotón naranja). Dembow es el único pulso rítmico. Fase Espectral ya no pega.
+
+### Not touched
+- Player physics, World director/collisions (solo radio de imán), Audio internals (método nuevo `powerId`), Backdrop, Transition.
+
 ## [v8.5] — 2026-09-17
 
 Nova Protocol v3.1 overlay: cazador con HP, zoom móvil, poderes nuevos, clima/colapso/invasiones/hologramas — **sin reescribir** Player, World director, Economy, Backdrop, Audio ni Transition.

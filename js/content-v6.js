@@ -211,55 +211,59 @@
   const POWERS = [
     {
       id: 'flight', name: 'Vector Cero', icon: '▲', duration: 7, col: '#38bdf8', cost: 45,
-      desc: 'Vuelo controlado. Atraviesa el suelo.', unlock: { type: 'base' }
+      desc: 'Vuelo. Anillos de sustentación. Cero daño: solo movilidad.', unlock: { type: 'base' }
     },
     {
       id: 'ascended', name: 'Modo Guardián', icon: '✦', duration: 10, col: '#22d3ee', cost: 100,
-      desc: 'Armadura voltaica: velocidad ×1.45 y arrasa por contacto.', unlock: { type: 'base' }
+      desc: 'Armadura y velocidad ×1.45. Arrasa por contacto (no es Coloso).', unlock: { type: 'base' }
     },
     {
       id: 'voltz_sphere', name: 'Núcleo Espiral', icon: '◉', duration: 0.4, col: '#60a5fa', cost: 55,
-      desc: 'Carga y limpia el obstáculo más cercano.', unlock: { type: 'base' }
+      desc: 'Esfera que carga 350ms y explota en un solo blanco cercano.', unlock: { type: 'base' }
     },
     {
       id: 'double_laser', name: 'Haz Ocular', icon: '⇉', duration: 2.4, col: '#ec4899', cost: 50,
-      desc: 'Dos haces oculares que atraviesan alineados.', unlock: { type: 'base' }
+      desc: 'Dos láseres horizontales con 300ms de intervalo. Perfora 2.', unlock: { type: 'base' }
     },
     {
       id: 'dance', name: 'Onda Dembow', icon: '♪', duration: 3.5, col: '#ec4899', cost: 40,
-      desc: 'Baile con onda. Invulnerable, sin salto.', unlock: { type: 'base' }
+      desc: 'Ritmo: ondas en el suelo cada 0.7s. I-frames. Sin salto.', unlock: { type: 'base' }
     },
     {
       id: 'invincible', name: 'Fiebre Neón', icon: '♥', duration: 8, col: '#a855f7', cost: 60,
-      desc: 'Inmune con tema musical corto.', unlock: { type: 'base' }
+      desc: 'Inmune y imán de monedas (no pega). Aura púrpura.', unlock: { type: 'base' }
     },
     {
       id: 'shadow', name: 'Fase Espectral', icon: '◐', duration: 6, col: '#94a3b8', cost: 45,
-      desc: 'Silueta translúcida, humo neón.', unlock: { type: 'base' }
+      desc: 'Fantasma: silueta 45%. Sin daño. Humo. No es Fiebre.', unlock: { type: 'base' }
     },
     {
       id: 'bullet_time', name: 'Tiempo Ámbar', icon: '◷', duration: 5, col: '#f59e0b', cost: 50,
-      desc: 'El mundo se ralentiza, tú no.', unlock: { type: 'base' }
+      desc: 'El mundo a 35%. Tú a 100%. Tinte ámbar. Sin golpes.', unlock: { type: 'base' }
     },
     {
       id: 'volt_storm', name: 'Tormenta de Voltios', icon: '⚡', duration: 4, col: '#22d3ee', cost: 65,
-      desc: 'Descargas en cadena a enemigos en pantalla.', unlock: { type: 'base' }
+      desc: 'Rayos en cadena (hasta 4) cada 0.5s. No es Pulso Nova.', unlock: { type: 'base' }
     },
     {
       id: 'colossus', name: 'Coloso Tectónico', icon: '▣', duration: 9, col: '#f97316', cost: 100,
-      desc: 'Escala y rompe todo por contacto.', unlock: { type: 'base' }
+      desc: 'Gigante (escala 1.25). Pisotón de contacto. Naranja.', unlock: { type: 'base' }
     },
     {
       id: 'nova_pulse', name: 'Pulso Nova', icon: '✺', duration: 0.45, col: '#67e8f9', cost: 70,
-      desc: 'Onda expansiva. Daña a todo enemigo en pantalla.', unlock: { type: 'base' }
+      desc: 'Una onda de pantalla completa. Un solo impacto.', unlock: { type: 'base' }
     },
     {
       id: 'star_lance', name: 'Lanza Estelar', icon: '➤', duration: 0.55, col: '#fde68a', cost: 55,
-      desc: 'Proyectil con auto-aim al cazador activo.', unlock: { type: 'base' }
+      desc: 'Proyectil auto-aim al cazador. Trail dorado. Timing.', unlock: { type: 'base' }
     },
     {
       id: 'quantum_shield', name: 'Escudo Cuántico', icon: '◎', duration: 1.8, col: '#c4b5fd', cost: 50,
-      desc: 'Bloquea el próximo ataque y refleja daño.', unlock: { type: 'base' }
+      desc: 'Bloquea y refleja el próximo ataque enemigo.', unlock: { type: 'base' }
+    },
+    {
+      id: 'freight_bat', name: 'Bate de Carga', icon: '🏏', duration: 2.4, col: '#fbbf24', cost: 85,
+      desc: 'Camión de circuito LCS. Telegrafía 450ms y bateas desde el toldo.', unlock: { type: 'base' }
     }
   ];
 

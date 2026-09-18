@@ -26,6 +26,11 @@
     "TIEMPO_AMBAR":     { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 5000,  "cost": 50, "worldTimeScale": 0.35 },
     "TORMENTA_VOLTIOS": { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 4000,  "cost": 65 },
     "FASE_ESPECTRAL":   { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "partial",   "maxDurationMs": 6000,  "cost": 45 },
+    "COLOSO_TECTONICO": { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "common",    "maxDurationMs": 9000,  "cost": 100 },
+    "PULSO_NOVA":       { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 450,   "cost": 70 },
+    "LANZA_ESTELAR":    { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 550,   "cost": 55 },
+    "ESCUDO_CUANTICO":  { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "next_hit",  "maxDurationMs": 1800,  "cost": 50 },
+    "BATE_CARGA":       { "maxSpeedMult": 1.00, "maxAltitudePx": 250, "invuln": "all",       "maxDurationMs": 2400,  "cost": 85 },
     "EXPLOSION_ESTELAR":{ "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 0,     "cost": 100 }
   },
   "combat": {
@@ -44,7 +49,11 @@
     "bullet_time": "TIEMPO_AMBAR",
     "volt_storm": "TORMENTA_VOLTIOS",
     "shadow": "FASE_ESPECTRAL",
-    "colossus": "MODO_GUARDIAN",
+    "colossus": "COLOSO_TECTONICO",
+    "nova_pulse": "PULSO_NOVA",
+    "star_lance": "LANZA_ESTELAR",
+    "quantum_shield": "ESCUDO_CUANTICO",
+    "freight_bat": "BATE_CARGA",
     "super": "EXPLOSION_ESTELAR"
   }
 }

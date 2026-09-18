@@ -147,6 +147,7 @@
     },
 
     activate(p) {
+      if (!p || !p.id) return;
       const player = this.api.getPlayer();
       const rt = this.api.getRuntime();
       const fx = this.api.fx || {};
@@ -163,11 +164,10 @@
       if (fx.burst) fx.burst(p.col);
       if (fx.sfx) fx.sfx(p.id);
       if (fx.toast) fx.toast('PODER: ' + p.name.toUpperCase());
-      if ((p.id === 'ascended' || p.id === 'colossus' || p.id === 'dance') && fx.hitFromPower) fx.hitFromPower(p.id, p.col);
-      // Instant impacts: esfera + haz first beam + tormenta kickoff
-      if ((p.id === 'voltz_sphere' || p.id === 'double_laser' || p.id === 'volt_storm') && fx.hitFromPower) {
-        /* staged in update — voltz waits charge; laser fires stage 0 next tick */
-      }
+      if (global.RLPowerFX) global.RLPowerFX.begin(p.id);
+      if (p.id === 'freight_bat' && player) player.iframe = Math.max(player.iframe, 2.4);
+      if ((p.id === 'ascended' || p.id === 'colossus') && fx.hitFromPower) fx.hitFromPower(p.id, p.col);
+      if (p.id === 'dance' && fx.hitFromPower) fx.hitFromPower(p.id, p.col);
       if (global.RLNova && (p.id === 'nova_pulse' || p.id === 'star_lance' || p.id === 'quantum_shield')) {
         global.RLNova.onPower(p.id);
       }
@@ -179,7 +179,8 @@
       const player = this.api.getPlayer();
       const fx = this.api.fx || {};
       this.timeLeft -= dt;
-      if (p.id === 'invincible' || p.id === 'ascended' || p.id === 'colossus' || p.id === 'dance') {
+      if (global.RLPowerFX) global.RLPowerFX.update(dt, dt);
+      if (p.id === 'invincible' || p.id === 'ascended' || p.id === 'colossus' || p.id === 'dance' || p.id === 'freight_bat') {
         if (player) player.iframe = Math.max(player.iframe, Math.max(0, this.timeLeft));
       }
       if (p.id === 'voltz_sphere') {
@@ -196,20 +197,34 @@
         if (this.stage === 0) { this.stage = 1; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
         if (this.charge >= 0.5) { this.charge = 0; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
       }
-      if (p.id === 'dance' || p.id === 'invincible' || p.id === 'shadow') {
+      if (p.id === 'dance') {
         this.charge += dt;
-        const pulse = p.id === 'dance' ? 0.7 : 0.85;
-        if (this.charge >= pulse) { this.charge = 0; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
+        if (this.charge >= 0.7) { this.charge = 0; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
+      }
+      if (p.id === 'freight_bat') {
+        this.charge += dt;
+        if (this.stage === 0 && this.charge >= 0.45) {
+          this.stage = 1;
+          if (fx.hitFromPower) fx.hitFromPower(p.id, p.col);
+          if (global.RLNova) global.RLNova.damageHunter(4);
+        }
+        if (this.stage === 1 && this.charge >= 1.05) {
+          this.stage = 2;
+          if (fx.hitFromPower) fx.hitFromPower(p.id, p.col);
+          if (global.RLNova) global.RLNova.damageHunter(2);
+        }
       }
       if (p.id === 'bullet_time' && fx.weakenAll) fx.weakenAll(0, 0.35);
       if (p.id === 'colossus' && player) {
         player.iframe = Math.max(player.iframe, Math.max(0, this.timeLeft));
         player.sx = 1.25; player.sy = 1.35;
       }
-      if ((p.id === 'flight' || p.id === 'ascended' || p.id === 'shadow' || p.id === 'volt_storm') && fx.trail && Math.random() < 0.5) {
+      if (p.id === 'ascended' && player) {
+        player.sx = 1.08; player.sy = 1.08;
+      }
+      if ((p.id === 'flight' || p.id === 'shadow' || p.id === 'volt_storm') && fx.trail && Math.random() < 0.5) {
         fx.trail(p.col);
       }
-      // Instant powers with duration 0 / near-zero: close after impact
       if (p.duration <= 0 && this.stage >= 1) this.deactivate();
       else if (this.timeLeft <= 0) this.deactivate();
     },
@@ -228,6 +243,7 @@
         player.sx = 1; player.sy = 1;
       }
       this.active = null; this.timeLeft = 0; this.stage = 0; this.charge = 0;
+      if (global.RLPowerFX) global.RLPowerFX.end();
       if (global.RLPowerLog) global.RLPowerLog.closeLast(Date.now());
       if (fx.toast) fx.toast(p.name.toUpperCase() + ' AGOTADO');
     },
@@ -242,9 +258,10 @@
 
     isPaused() { return this.open; },
     freeFlight() { return !!(this.active && this.active.id === 'flight'); },
-    jumpLocked() { return !!(this.active && this.active.id === 'dance'); },
+    jumpLocked() { return !!(this.active && (this.active.id === 'dance' || this.active.id === 'freight_bat')); },
     worldSpeedMul() { return (this.active && this.active.id === 'bullet_time') ? 0.35 : 1; },
     alphaMul() { return (this.active && this.active.id === 'shadow') ? 0.45 : 1; },
+    coinMagnet() { return !!(this.active && this.active.id === 'invincible'); },
     label() {
       if (!this.active) return '';
       return this.active.name.toUpperCase() + ' ' + Math.max(0, this.timeLeft).toFixed(1) + 's';

@@ -1,5 +1,5 @@
 /* Runner Legends PWA — cache-first static, network-first API fallback */
-const CACHE_VERSION = 'rl-v8-5-nova';
+const CACHE_VERSION = 'rl-v8-6-powers';
 const PRECACHE = [
   './',
   './index.html',
@@ -14,6 +14,7 @@ const PRECACHE = [
   './js/combat-v8.js',
   './js/enemies-v8.js',
   './js/nova-protocol.js',
+  './js/power-fx.js',
   './js/game.js',
   './assets/icon-192.svg',
   './assets/icon-512.svg',

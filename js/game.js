@@ -79,7 +79,7 @@
   const NO_POWERS = {
     init() {}, reset() {}, update() {}, openSelector() { return false; },
     isPaused() { return false; }, freeFlight() { return false; }, jumpLocked() { return false; },
-    worldSpeedMul() { return 1; }, alphaMul() { return 1; }, label() { return ''; }, active: null
+    worldSpeedMul() { return 1; }, alphaMul() { return 1; }, coinMagnet() { return false; }, label() { return ''; }, active: null
   };
   const powers = window.RLPowers || NO_POWERS;
 
@@ -368,6 +368,24 @@
     hurt() { if (!this.can('hurt', 120)) return; this.beep(88, 0.16, 'sawtooth', 0.05); this.beep(55, 0.2, 'triangle', 0.03); },
     portal() { if (!this.can('portal', 200)) return; this.chord([140, 210, 280, 420], 0.45, 'sine', 0.05); this.beep(90, 0.5, 'triangle', 0.03); },
     superFx() { if (!this.can('super', 150)) return; this.chord([180, 270, 360, 540], 0.35, 'sawtooth', 0.04); this.beep(720, 0.2, 'square', 0.025); },
+    powerId(id) {
+      if (!this.can('pwr_' + (id || 'x'), 90)) return;
+      if (id === 'freight_bat') { this.beep(90, 0.18, 'sawtooth', 0.05); this.beep(220, 0.12, 'square', 0.03); this.chord([140, 180], 0.2, 'triangle', 0.04); return; }
+      if (id === 'double_laser') { this.beep(880, 0.08, 'square', 0.03); this.beep(1320, 0.1, 'sawtooth', 0.02); return; }
+      if (id === 'voltz_sphere') { this.beep(240, 0.2, 'sine', 0.04); this.beep(720, 0.12, 'triangle', 0.03); return; }
+      if (id === 'volt_storm') { this.chord([980, 1240, 1560], 0.12, 'square', 0.028); return; }
+      if (id === 'dance') { this.beep(200, 0.08, 'square', 0.04); this.beep(300, 0.08, 'triangle', 0.03); return; }
+      if (id === 'invincible') { this.chord([392, 494, 587], 0.28, 'sine', 0.03); return; }
+      if (id === 'shadow') { this.beep(160, 0.22, 'triangle', 0.03); return; }
+      if (id === 'bullet_time') { this.beep(110, 0.35, 'sine', 0.04); return; }
+      if (id === 'nova_pulse') { this.chord([180, 240, 360], 0.3, 'sine', 0.04); return; }
+      if (id === 'star_lance') { this.beep(640, 0.08, 'square', 0.03); this.beep(980, 0.1, 'sine', 0.025); return; }
+      if (id === 'quantum_shield') { this.chord([330, 440, 550], 0.2, 'triangle', 0.03); return; }
+      if (id === 'flight') { this.beep(520, 0.12, 'sine', 0.03); return; }
+      if (id === 'colossus') { this.beep(70, 0.25, 'sawtooth', 0.05); return; }
+      if (id === 'ascended') { this.chord([220, 330, 440], 0.22, 'sine', 0.035); return; }
+      this.superFx();
+    },
     combo() { if (!this.can('combo', 90)) return; this.beep(760 + Math.min(economy.combo, 20) * 18, 0.04, 'triangle', 0.03); },
     specialPickup() { if (!this.can('special', 100)) return; this.chord([520, 660, 784, 990, 1180], 0.22, 'sine', 0.035); this.laugh(); },
     memoryTone() { if (!this.can('mem', 120)) return; this.chord([330, 415, 494], 0.3, 'triangle', 0.03, 'voice'); },
@@ -1143,7 +1161,7 @@
       this.coins.forEach((o) => {
         if (o.taken) return;
         const dxp = p.x - o.x, dyp = p.y + p.h / 2 - o.y;
-        const mag = powers.freeFlight() ? 180 : 28;
+        const mag = powers.freeFlight() ? 180 : (powers.coinMagnet && powers.coinMagnet() ? 240 : 28);
         if (dxp * dxp + dyp * dyp < (o.r + mag) * (o.r + mag)) {
           o.taken = true; o.alive = false; economy.addCoin();
           particles.burst(o.x, o.y, 8, { col: '#ffd24a', spMax: 140, lifeMax: 0.4, g: 300 });
@@ -1445,7 +1463,10 @@
       particles.burst(player.x, player.y + player.h * 0.4, 48, { col, spMax: 460, up: 120, lifeMax: 0.85 });
     },
     trail: (col) => particles.burst(player.x - 12, player.y + player.h * 0.6, 3, { col, spMax: 90, lifeMax: 0.4, g: 120 }),
-    sfx: () => audio.superFx(),
+    sfx: (id) => {
+      if (audio.powerId) audio.powerId(id);
+      else audio.superFx();
+    },
     weakenAll: (stun, slow) => {
       const C = window.RLCombat;
       if (!C) return;
@@ -1712,22 +1733,25 @@
     const w = p.w * p.sx, h = p.h * p.sy;
     const bob = idle ? Math.sin(performance.now() * 0.004) * 3 : (p.onGround ? Math.sin((p.runPhase || 0) * 14) * 2 : 0);
     const col = trailColor();
-    const guardian = powers.active && (powers.active.id === 'ascended' || powers.active.id === 'colossus');
+    const pid = powers.active && powers.active.id;
+    const guardian = pid === 'ascended';
+    const titan = pid === 'colossus';
     ctx.save();
     if (!idle && p.trail) {
       for (let i = 0; i < p.trail.length; i++) {
         const tr = p.trail[i];
         ctx.globalAlpha = clamp(tr.life * 2.2, 0, 0.28);
-        ctx.fillStyle = guardian ? '#22d3ee' : col;
+        ctx.fillStyle = titan ? '#f97316' : guardian ? '#22d3ee' : col;
         ctx.fillRect(tr.x - w * 0.28, tr.y - h * 0.3, w * 0.55, h * 0.5);
       }
       ctx.globalAlpha = 1;
     }
     ctx.translate(cx, top + h / 2 + bob);
+    if (!idle && pid === 'freight_bat') ctx.translate(0, -36);
     ctx.globalAlpha = powers.alphaMul();
     if (p.iframe > 0 && Math.floor(performance.now() / 60) % 2 === 0) ctx.globalAlpha *= 0.45;
     const kick = idle ? 0 : Math.sin((p.runPhase || 0) * 14) * 5;
-    ctx.shadowColor = guardian ? '#22d3ee' : col;
+    ctx.shadowColor = titan ? '#f97316' : guardian ? '#22d3ee' : col;
     ctx.shadowBlur = 16;
     // Legs
     ctx.fillStyle = guardian ? '#1e293b' : '#0b1228';
@@ -1738,7 +1762,9 @@
     ctx.fillRect(w * 0.06, h * 0.46 - kick * 0.4, 16, 8);
     // Torso plates
     const body = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
-    if (guardian) {
+    if (titan) {
+      body.addColorStop(0, '#7c2d12'); body.addColorStop(0.5, '#1c1917'); body.addColorStop(1, '#f97316');
+    } else if (guardian) {
       body.addColorStop(0, '#334155'); body.addColorStop(0.5, '#0f172a'); body.addColorStop(1, '#22d3ee');
     } else {
       body.addColorStop(0, '#1e3a8a'); body.addColorStop(0.45, '#0f172a'); body.addColorStop(1, '#22d3ee');
@@ -1924,7 +1950,11 @@
       backdrop.draw(ctx, view);
       if (mgr.state === 'PLAY' || mgr.state === 'RESULTS') {
         drawGround(ctx, view); drawWorld(ctx, view); particles.draw(ctx);
-        if (!player.dead || mgr.state === 'PLAY') drawKori(ctx, view, false);
+        if (!player.dead || mgr.state === 'PLAY') {
+          if (window.RLPowerFX) window.RLPowerFX.drawUnder(ctx, view, player);
+          drawKori(ctx, view, false);
+          if (window.RLPowerFX) window.RLPowerFX.drawOver(ctx, view, player);
+        }
         if (window.RLNova) window.RLNova.draw(ctx, view);
         weatherFX.draw(ctx, view);
       } else {
@@ -2355,8 +2385,9 @@
           r.push({ id: 'stomp-falling', pass: C.isStomp({ dead: false, vy: 80, y: 10, h: 40 }, 42) === true });
           r.push({ id: 'stomp-rising', pass: C.isStomp({ dead: false, vy: -10, y: 10, h: 20 }, 40) === false });
           const P = window.RLPowers;
-          r.push({ id: 'powers-13', pass: !!(P && P.list && P.list().length === 13) });
-          r.push({ id: 'powers-unlocked', pass: !!(P && P.unlockedIds && P.unlockedIds(save).length === 13) });
+          r.push({ id: 'powers-14', pass: !!(P && P.list && P.list().length === 14) });
+          r.push({ id: 'powers-unlocked', pass: !!(P && P.unlockedIds && P.unlockedIds(save).length === 14) });
+          r.push({ id: 'powers-unique', pass: !!(P && P.list && (function () { const ids = P.list().map((x) => x.id); return ids.length === new Set(ids).size && ids.indexOf('freight_bat') >= 0; })()) });
           r.push({ id: 'quality-tier', pass: !!(quality && quality.tier) });
           r.push({ id: 'one-power', pass: !!(P && P.active === null || true) });
           r.push({ id: 'nova-module', pass: !!(N && N.snapshot) });
