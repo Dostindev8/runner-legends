@@ -249,6 +249,7 @@
     shake.add(0.28);
     if (world) world.kills = (world.kills || 0) + 1;
     audio.coin();
+    if (window.RLNova) window.RLNova.onKill();
   }
 
   function unlockNextWorld(fromId) {
@@ -453,7 +454,9 @@
       else if (vh < 500) this.h = 360;
       else if (vw <= 768) this.h = 440;
       else this.h = CFG.logicalH;
-      this.scale = vh / this.h;
+      this.novaZoom = 1;
+      if (vw < 700) this.novaZoom = 1 + ((700 - vw) / 700) * 0.35;
+      this.scale = (vh / this.h) * this.novaZoom;
       this.w = Math.max(280, vw / this.scale);
       this.c.width = Math.round(vw * this.dpr);
       this.c.height = Math.round(vh * this.dpr);
@@ -1020,7 +1023,7 @@
       this.speed = Math.min(maxSp * bossMul, this.speed + CFG.runAccel * activeDiff.scroll * dt);
       this.aliveT += dt; this.spawnLock = Math.max(0, this.spawnLock - dt);
       const dx = this.speed * dt; this.dist += dx / 26; this.segmentDist += dx / 26;
-      view.lookAhead = lerp(view.lookAhead, Math.min(28, this.speed * 0.04), clamp(dt * 4, 0, 1));
+      view.lookAhead = lerp(view.lookAhead, Math.min(42, this.speed * 0.04) + ((view.novaZoom || 1) - 1) * 22, clamp(dt * 4, 0, 1));
       backdrop.scroll(dx); particles.scroll(dx);
       this.crates.forEach((o) => {
         o.x -= dx;
@@ -1331,6 +1334,7 @@
     powers.reset();
     if (window.RLCombat) window.RLCombat.reset();
     if (window.RLPowerLog) window.RLPowerLog.reset();
+    if (window.RLNova) window.RLNova.reset();
     $('diffChip').textContent = activeDiff.chip;
     $('ruleChip').textContent = runtime.rule.icon + ' ' + runtime.rule.label;
     $('worldChip').textContent = runtime.world.name.toUpperCase();
@@ -1427,6 +1431,7 @@
     const n = world.clearEnemies(); economy.buff(2, 2.0);
     economy.coins += Math.round(n * 5 * activeDiff.reward);
     if (world.boss && world.boss.active) world.boss.hitBySuper();
+    if (window.RLNova) window.RLNova.damageHunter(5);
     save.supers = (save.supers || 0) + 1; persist();
     evaluateAchievements(null);
     flashToast('¡EXPLOSIÓN ESTELAR!');
@@ -1472,6 +1477,7 @@
         n++;
       }
       if (world.boss && world.boss.active && (prof.dmg || 0) > 0) world.boss.hitBySuper();
+      if (window.RLNova && (prof.dmg || 0) > 0) window.RLNova.damageHunter(Math.max(1, prof.dmg >= 90 ? 3 : 2));
       if (n === 0) {
         const tx = view.w * 0.78, ty = view.groundY - 80;
         C.fireHaz(player.x + 18, player.y + 22, tx, ty, col);
@@ -1892,6 +1898,7 @@
         player.update(dt, input, world);
         economy.update(dt);
         if (window.RLCombat) window.RLCombat.update(dt);
+        if (window.RLNova) window.RLNova.update(dt, raw);
       } else world.update(0, player);
       particles.update(raw); backdrop.update(raw); weatherFX.update(raw, view); syncHUD();
     } else if (mgr.state === 'TRANSIT') {
@@ -1918,6 +1925,7 @@
       if (mgr.state === 'PLAY' || mgr.state === 'RESULTS') {
         drawGround(ctx, view); drawWorld(ctx, view); particles.draw(ctx);
         if (!player.dead || mgr.state === 'PLAY') drawKori(ctx, view, false);
+        if (window.RLNova) window.RLNova.draw(ctx, view);
         weatherFX.draw(ctx, view);
       } else {
         drawGround(ctx, view); particles.draw(ctx);
@@ -2058,7 +2066,8 @@
       grid.innerHTML = WORLDS.map((w) => {
         const unlocked = save.unlocked.includes(w.id);
         const on = preferredOrigin === w.id;
-        return `<button type="button" class="world-tile${on ? ' on' : ''}${unlocked ? '' : ' lock'}" data-world="${esc(w.id)}" ${unlocked ? '' : 'disabled'}>
+        const hint = (w.mysteryHint || 'Señales perdidas. No confíes en tus ojos.');
+        return `<button type="button" class="world-tile${on ? ' on' : ''}${unlocked ? '' : ' lock'}" data-world="${esc(w.id)}" title="${esc(hint)}" ${unlocked ? '' : 'disabled'}>
           <b>${esc(w.short)}</b><span>${esc(w.name)}</span>${unlocked ? '' : '<i>🔒</i>'}
         </button>`;
       }).join('');
@@ -2087,8 +2096,8 @@
       body.innerHTML = WORLDS.map((w) => {
         const u = save.unlocked.includes(w.id);
         return `<div class="info-card"><h3>${esc(w.short)} · ${esc(w.name)}${u ? '' : ' 🔒'}</h3>
-          <p>${esc(w.description)}</p>
-          <p class="meta">Regla: ${esc(RLWorlds.getRule(w.specialRule).label)} · Climas: ${w.weatherPool.map((id) => esc(RLWorlds.getWeather(id).label)).join(', ')}</p></div>`;
+          <p>${esc(w.mysteryHint || 'Señales perdidas. No confíes en tus ojos.')}</p>
+          <p class="meta">Ficha desconocida · entra para descubrir las reglas.</p></div>`;
       }).join('');
     } else if (which === 'profile') {
       title.textContent = 'Perfil';
@@ -2229,6 +2238,27 @@
       fx: powerFX,
       persist
     });
+    if (window.RLNova) {
+      window.RLNova.init({
+        getView: () => view,
+        getPlayer: () => player,
+        getWorld: () => world,
+        getRuntime: () => runtime,
+        getDiff: () => activeDiff.id,
+        getEconomy: () => economy,
+        clock: clock,
+        shake: shake,
+        toast: (t) => flashToast(t),
+        audioNova: () => { if (audio.superFx) audio.superFx(); },
+        rewardHunter: () => {
+          if (world) world.kills = (world.kills || 0) + 1;
+          economy.coins += Math.round(12 * activeDiff.reward);
+          economy.buff(1.5, 1.4);
+          audio.coin();
+        },
+        rewardFoe: (o, col) => rewardFoe(o, col)
+      });
+    }
 
     if (save.legendary) {
       const btn = document.querySelector('[data-diff="legendary"]');
@@ -2309,9 +2339,12 @@
         player: () => player, world: () => world, econ: () => economy,
         combat: () => window.RLCombat, powerLog: () => window.RLPowerLog && window.RLPowerLog.snapshot(),
         enemies: () => window.RLEnemies,
+        nova: () => window.RLNova && window.RLNova.snapshot(),
+        novaHit: (n) => window.RLNova && window.RLNova.qaHit(n),
+        novaSpawn: () => window.RLNova && window.RLNova.qaSpawn(),
         filterClean: () => view.ctx.filter === 'none' || view.ctx.filter === '',
         selftest() {
-          const C = window.RLCombat, E = window.RLEnemies;
+          const C = window.RLCombat, E = window.RLEnemies, N = window.RLNova;
           const r = [];
           const dummy = { alive: true, hp: 200, maxHp: 200, x: 100, y: 100, immortal: false, stun: 0, slow: 1 };
           const dead = C.powerAgainst(dummy, 'double_laser');
@@ -2322,10 +2355,12 @@
           r.push({ id: 'stomp-falling', pass: C.isStomp({ dead: false, vy: 80, y: 10, h: 40 }, 42) === true });
           r.push({ id: 'stomp-rising', pass: C.isStomp({ dead: false, vy: -10, y: 10, h: 20 }, 40) === false });
           const P = window.RLPowers;
-          r.push({ id: 'powers-10', pass: !!(P && P.list && P.list().length === 10) });
-          r.push({ id: 'powers-unlocked', pass: !!(P && P.unlockedIds && P.unlockedIds(save).length === 10) });
+          r.push({ id: 'powers-13', pass: !!(P && P.list && P.list().length === 13) });
+          r.push({ id: 'powers-unlocked', pass: !!(P && P.unlockedIds && P.unlockedIds(save).length === 13) });
           r.push({ id: 'quality-tier', pass: !!(quality && quality.tier) });
           r.push({ id: 'one-power', pass: !!(P && P.active === null || true) });
+          r.push({ id: 'nova-module', pass: !!(N && N.snapshot) });
+          r.push({ id: 'nova-zoom', pass: typeof view.novaZoom === 'number' && view.novaZoom >= 1 });
           return { pass: r.every((x) => x.pass), cases: r };
         }
       };

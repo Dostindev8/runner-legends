@@ -16,7 +16,10 @@
     bullet_time: { dmg: 0, stun: 0, slow: 0.35 },
     volt_storm: { dmg: 1, stun: 0.15, slow: 0.5, chain: 4 },
     colossus: { dmg: 2, stun: 0.2, slow: 0, radius: 260 },
-    super: { dmg: 99, stun: 0.1, slow: 0 }
+    super: { dmg: 99, stun: 0.1, slow: 0 },
+    nova_pulse: { dmg: 2, stun: 0.2, slow: 0, radius: 900 },
+    star_lance: { dmg: 3, stun: 0.15, slow: 0, pierce: 1 },
+    quantum_shield: { dmg: 0, stun: 0, slow: 0 }
   };
 
   function E(id, name, hp, stompable, telegraphMs, pattern, col, w, h) {

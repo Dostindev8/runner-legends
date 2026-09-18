@@ -248,6 +248,18 @@
     {
       id: 'colossus', name: 'Coloso Tectónico', icon: '▣', duration: 9, col: '#f97316', cost: 100,
       desc: 'Escala y rompe todo por contacto.', unlock: { type: 'base' }
+    },
+    {
+      id: 'nova_pulse', name: 'Pulso Nova', icon: '✺', duration: 0.45, col: '#67e8f9', cost: 70,
+      desc: 'Onda expansiva. Daña a todo enemigo en pantalla.', unlock: { type: 'base' }
+    },
+    {
+      id: 'star_lance', name: 'Lanza Estelar', icon: '➤', duration: 0.55, col: '#fde68a', cost: 55,
+      desc: 'Proyectil con auto-aim al cazador activo.', unlock: { type: 'base' }
+    },
+    {
+      id: 'quantum_shield', name: 'Escudo Cuántico', icon: '◎', duration: 1.8, col: '#c4b5fd', cost: 50,
+      desc: 'Bloquea el próximo ataque y refleja daño.', unlock: { type: 'base' }
     }
   ];
 

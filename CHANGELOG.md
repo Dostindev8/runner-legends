@@ -1,5 +1,23 @@
 # Changelog
 
+## [v8.5] — 2026-09-17
+
+Nova Protocol v3.1 overlay: cazador con HP, zoom móvil, poderes nuevos, clima/colapso/invasiones/hologramas — **sin reescribir** Player, World director, Economy, Backdrop, Audio ni Transition.
+
+### Added
+- `js/nova-protocol.js` (pools + `window.__rl.nova` en `?qa`).
+- Poderes Pulso Nova, Lanza Estelar, Escudo Cuántico (Explosión Estelar intacta).
+- Zoom de cámara 1.0–1.35x si viewport <700px; look-ahead extra.
+- Fichas de mundo crípticas (`mysteryHint`); hologramas de distracción.
+- `novaAgro` por mundo; Modo Nova tras 2 cazadores (+8% `speedMul`).
+
+### Changed
+- HUD: chips más grandes, SÚPER ≥56px con glow pulsante.
+- SW `rl-v8-5-nova`.
+
+### Not touched
+- Física de `Player.update`, `_director`/`_collisions`, Economy, Backdrop internals, Audio internals, iris/Transition.
+
 ## [v8.4] — 2026-09-17
 
 Auditoría móvil + poderes + Historia bloqueada. Calidad adaptativa (DPR/partículas) sin tocar reglas de juego.

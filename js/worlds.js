@@ -87,6 +87,7 @@
       difficulty: 1, environment: 'city_night',
       gravity: 1, speedMultiplier: 1.08,
       weatherPool: ['rain', 'urban_fog', 'clear_night'],
+      novaAgro: 1.0,
       specialRule: 'extreme_speed',
       specialRuleVariants: [{ weather: 'rain', extra: { friction: 0.88 } }],
       transitionLayers: ['tunnel', 'galaxy', 'planet', 'storm'],
@@ -99,6 +100,7 @@
       difficulty: 2, environment: 'desert',
       gravity: 1, speedMultiplier: 1,
       weatherPool: ['sandstorm', 'heat', 'clear_desert'],
+      novaAgro: 1.08,
       specialRule: 'sand_push',
       specialRuleVariants: [],
       transitionLayers: ['tunnel', 'galaxy', 'planet', 'sand'],
@@ -111,6 +113,7 @@
       difficulty: 2, environment: 'ice',
       gravity: 1.05, speedMultiplier: 0.98,
       weatherPool: ['snow', 'blizzard', 'frozen_clear'],
+      novaAgro: 1.05,
       specialRule: 'slippery',
       specialRuleVariants: [{ weather: 'blizzard', extra: { lateralPush: 30 } }],
       transitionLayers: ['tunnel', 'aurora', 'planet', 'storm'],
@@ -123,6 +126,7 @@
       difficulty: 3, environment: 'arena',
       gravity: 1, speedMultiplier: 1.05,
       weatherPool: ['clear', 'electric'],
+      novaAgro: 1.12,
       specialRule: 'living_arena',
       specialRuleVariants: [],
       transitionLayers: ['tunnel', 'structures', 'planet'],
@@ -135,6 +139,7 @@
       difficulty: 3, environment: 'ocean',
       gravity: 0.6, speedMultiplier: 0.92,
       weatherPool: ['abyssal_fog', 'bio_glow', 'storm'],
+      novaAgro: 0.95,
       specialRule: 'low_gravity',
       specialRuleVariants: [],
       transitionLayers: ['tunnel', 'galaxy', 'ocean', 'planet'],
@@ -147,6 +152,7 @@
       difficulty: 3, environment: 'clouds',
       gravity: 0.9, speedMultiplier: 1,
       weatherPool: ['strong_wind', 'storm', 'clear'],
+      novaAgro: 1.1,
       specialRule: 'floating_platforms',
       specialRuleVariants: [],
       transitionLayers: ['tunnel', 'clouds', 'planet', 'storm'],
@@ -159,6 +165,7 @@
       difficulty: 4, environment: 'forest',
       gravity: 1, speedMultiplier: 1,
       weatherPool: ['urban_fog', 'light_rain', 'clear_night'],
+      novaAgro: 1.15,
       specialRule: 'living_obstacles',
       specialRuleVariants: [],
       transitionLayers: ['tunnel', 'spores', 'planet'],
@@ -171,6 +178,7 @@
       difficulty: 4, environment: 'volcano',
       gravity: 1.08, speedMultiplier: 1.02,
       weatherPool: ['ash', 'extreme_heat', 'meteors'],
+      novaAgro: 1.18,
       specialRule: 'heat_zones',
       specialRuleVariants: [],
       transitionLayers: ['tunnel', 'galaxy', 'planet', 'ash'],
@@ -183,6 +191,7 @@
       difficulty: 5, environment: 'fractal',
       gravity: 1, speedMultiplier: 1.1,
       weatherPool: ['distortion', 'impossible'],
+      novaAgro: 1.2,
       specialRule: 'fractal_shift',
       specialRuleVariants: [],
       transitionLayers: ['tunnel', 'fractures', 'galaxy', 'planet'],
@@ -195,6 +204,7 @@
       difficulty: 5, environment: 'final',
       gravity: 1, speedMultiplier: 1.2,
       weatherPool: ['rotating'],
+      novaAgro: 1.28,
       specialRule: 'meta_combo',
       specialRuleVariants: [],
       transitionLayers: ['tunnel', 'galaxy', 'fractures', 'storm', 'planet'],
@@ -202,6 +212,22 @@
       bleed: 'mixed', musicTone: 240
     }
   ];
+
+  const MYSTERY = {
+    neon: 'Señales perdidas. No confíes en tus ojos.',
+    golden: 'El viento miente sobre la distancia.',
+    ice: 'El suelo recuerda cada aterrizaje.',
+    coliseum: 'La ovación no es tu aliada.',
+    abyssal: 'Abajo no hay suelo. Solo presión.',
+    celestial: 'Las nubes no perdonan el timing.',
+    quantum: 'Lo que parpadea te está mirando.',
+    igneous: 'El calor cobra peaje.',
+    fractal: 'El mapa se reescribe a cada paso.',
+    final: 'No hay nombres públicos aquí.'
+  };
+  for (let i = 0; i < WORLDS.length; i++) {
+    if (!WORLDS[i].mysteryHint) WORLDS[i].mysteryHint = MYSTERY[WORLDS[i].id] || MYSTERY.neon;
+  }
 
   function getWorld(id) {
     return WORLDS.find((w) => w.id === id) || WORLDS[0];

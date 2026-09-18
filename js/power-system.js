@@ -168,6 +168,9 @@
       if ((p.id === 'voltz_sphere' || p.id === 'double_laser' || p.id === 'volt_storm') && fx.hitFromPower) {
         /* staged in update — voltz waits charge; laser fires stage 0 next tick */
       }
+      if (global.RLNova && (p.id === 'nova_pulse' || p.id === 'star_lance' || p.id === 'quantum_shield')) {
+        global.RLNova.onPower(p.id);
+      }
     },
 
     update(dt) {
