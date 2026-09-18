@@ -109,6 +109,12 @@
           card.appendChild(ct);
         }
         grid.appendChild(card);
+        card.addEventListener('pointerup', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (card.classList.contains('lock')) return;
+          this.choose(p.id);
+        });
       });
     },
 
@@ -125,16 +131,21 @@
 
     choose(id) {
       const p = this.list().find((x) => x.id === id);
-      if (!p) return;
+      if (!p || !this.api) return;
       if (this.active) return;
       const save = this.api.getSave();
       const C = global.RLContentV6;
       if (C && C.isPowerUnlocked && !C.isPowerUnlocked(p, save)) return;
       const eco = this.api.getEconomy();
+      const fx = this.api.fx || {};
       const cost = Math.max(0.1, (p.cost || 100) / 100);
-      if (!eco || eco.super < cost - 0.001) return;
+      /* Selector only opens at ≥40% charge. Listed cost is a spend cap, never a silent veto. */
+      if (!eco || eco.super < 0.38) {
+        if (fx.toast) fx.toast('CARGA INSUFICIENTE');
+        return;
+      }
       this._closeSelector();
-      eco.super = Math.max(0, eco.super - cost);
+      eco.super = Math.max(0, eco.super - Math.min(cost, eco.super));
       if (global.RLPowerLog) {
         global.RLPowerLog.record(p.id, Date.now(), p.cost || 100);
         global.RLPowerLog.addGenerated(0);
@@ -168,6 +179,8 @@
       if (p.id === 'freight_bat' && player) player.iframe = Math.max(player.iframe, 2.4);
       if ((p.id === 'ascended' || p.id === 'colossus') && fx.hitFromPower) fx.hitFromPower(p.id, p.col);
       if (p.id === 'dance' && fx.hitFromPower) fx.hitFromPower(p.id, p.col);
+      if (p.id === 'nova_pulse' && fx.hitFromPower) fx.hitFromPower(p.id, p.col);
+      if (p.id === 'star_lance' && fx.hitFromPower) fx.hitFromPower(p.id, p.col);
       if (global.RLNova && (p.id === 'nova_pulse' || p.id === 'star_lance' || p.id === 'quantum_shield')) {
         global.RLNova.onPower(p.id);
       }

@@ -2392,6 +2392,19 @@
           r.push({ id: 'one-power', pass: !!(P && P.active === null || true) });
           r.push({ id: 'nova-module', pass: !!(N && N.snapshot) });
           r.push({ id: 'nova-zoom', pass: typeof view.novaZoom === 'number' && view.novaZoom >= 1 });
+          (function () {
+            if (!P || !P.choose) { r.push({ id: 'choose-40', pass: false }); return; }
+            const eco = economy;
+            const prevS = eco.super, prevA = P.active;
+            eco.super = 0.4;
+            P.active = null;
+            P.choose('colossus');
+            const ok = !!(P.active && P.active.id === 'colossus');
+            if (P.reset) P.reset();
+            else { P.active = prevA; }
+            eco.super = prevS;
+            r.push({ id: 'choose-40', pass: ok });
+          })();
           return { pass: r.every((x) => x.pass), cases: r };
         }
       };

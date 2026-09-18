@@ -1,5 +1,14 @@
 # Changelog
 
+## [v8.7] — 2026-09-17
+
+El selector ya no ignora el toque: SÚPER listo (≥40%) activa **cualquier** poder elegido. El % listado es gasto, no veto silencioso.
+
+### Fixed
+- `choose()` exigía `super >= cost` (45–100%) mientras el botón se encendía al 40%.
+- Tap en tarjeta: `pointerup` además del click del grid.
+- Pulso Nova / Lanza Estelar también golpean drones vía `hitFromPower`.
+
 ## [v8.6] — 2026-09-17
 
 Cada poder tiene firma propia (daño, VFX, SFX). Nuevo especial **Bate de Carga**: Kori bateá desde un camión de circuito LCS (telegrafía 450ms). Explosión Estelar no se tocó.
