@@ -106,7 +106,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 .btn:active{transform:scale(.94)}
 .btn.play{font-size:clamp(16px,4.4vw,20px);padding:16px 40px;clip-path:polygon(8% 0,100% 0,92% 100%,0 100%);
   background:linear-gradient(160deg,#ffe58a,var(--gold));box-shadow:0 10px 28px rgba(255,210,74,.4);color:#241800;border-radius:4px;max-width:100%}
-.btn.ghost{background:rgba(255,255,255,.07);color:#cdeeff;border:1px solid rgba(140,220,255,.3);box-shadow:none;font-size:11px;padding:9px 11px;clip-path:none;border-radius:12px}
+.btn.ghost{background:rgba(255,255,255,.07);color:#cdeeff;border:1px solid rgba(140,220,255,.3);box-shadow:none;font-size:11px;padding:9px 11px;clip-path:none;border-radius:12px;min-height:44px;min-width:44px}
+.btn.ghost.locked{opacity:.48;filter:grayscale(.35);cursor:pointer;position:relative}
+.btn.ghost.locked .badge-lock{display:inline-block;margin-left:4px;font-size:8px;letter-spacing:.08em;padding:2px 5px;border-radius:999px;border:1px solid rgba(255,210,74,.45);color:#ffe9a8;vertical-align:middle}
 .nav-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:8px}
 .foot{margin-top:8px;font-size:clamp(8px,2.2vw,10px);letter-spacing:.12em;opacity:.7;font-family:var(--font-display);text-align:center}
 .graffiti{display:flex;justify-content:space-between;gap:8px;width:100%;max-width:560px;margin-top:6px;
@@ -165,10 +167,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 .super-bar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ffd24a,#ff8a3c);transition:width .12s linear}
 .super-bar.ready{box-shadow:0 0 14px rgba(255,210,74,.7)}
 #superBtn{position:absolute;right:calc(12px + var(--safe-r));bottom:calc(14px + var(--safe-b));
-  width:clamp(72px,19vw,88px);height:clamp(72px,19vw,88px);border-radius:50%;border:2px solid rgba(255,210,74,.55);
+  width:max(72px,clamp(72px,19vw,88px));height:max(72px,clamp(72px,19vw,88px));min-width:44px;min-height:44px;border-radius:50%;border:2px solid rgba(255,210,74,.55);
   background:radial-gradient(circle at 35% 30%,#fff4c2,#ffb02e);color:#3a2400;font-family:var(--font-display);
   font-weight:900;font-size:clamp(9px,2.5vw,10px);letter-spacing:.06em;box-shadow:0 8px 24px rgba(255,160,40,.4);pointer-events:auto;
-  opacity:.35;cursor:pointer;z-index:12}
+  opacity:.35;cursor:pointer;z-index:12;touch-action:manipulation;-webkit-user-select:none;user-select:none}
 #superBtn.ready{opacity:1}
 .toast{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-family:var(--font-display);
   font-weight:900;font-size:clamp(14px,4.8vw,34px);color:#fff;text-shadow:0 0 20px var(--gold);opacity:0;pointer-events:none;letter-spacing:.04em;z-index:15;
@@ -339,7 +341,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
         <div class="title-block">
           <div class="crown" aria-hidden="true">◆</div>
           <div class="title-lg">RUNNER<br/>LEGENDS</div>
-          <div class="sub">DISTRITO NEÓN · V8.3</div>
+          <div class="sub">DISTRITO NEÓN · V8.4</div>
         </div>
 
         <div class="glass char-card">
@@ -374,6 +376,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
           <button class="btn ghost" type="button" data-panel="roster" id="charBtn">Personaje</button>
           <button class="btn ghost" type="button" data-panel="tournament">Torneo</button>
           <button class="btn ghost" type="button" data-panel="shop">Tienda</button>
+          <button class="btn ghost locked" type="button" id="historiaBtn" aria-disabled="true" title="Próximamente">🔒 Historia <span class="badge-lock">BLOQUEADO</span></button>
           <button class="btn ghost" type="button" id="introBtn">Ver intro</button>
         </div>
         <div class="foot">LOGIC CODE SPOT · IP 100% ORIGINAL<br/>Diseño y dirección: Dostin Santana</div>

@@ -139,6 +139,10 @@
         global.RLPowerLog.record(p.id, Date.now(), p.cost || 100);
         global.RLPowerLog.addGenerated(0);
       }
+      if (save && typeof save.supers === 'number') {
+        save.supers += 1;
+        if (this.api.persist) this.api.persist();
+      }
       this.activate(p);
     },
 
@@ -151,12 +155,19 @@
       this._saved = { rt, gravityMul: rt.gravityMul, speedMul: rt.speedMul };
       if (p.id === 'flight') rt.gravityMul = rt.gravityMul * 0.08;
       if (p.id === 'ascended') rt.speedMul = rt.speedMul * 1.45;
-      if (p.id === 'invincible' || p.id === 'ascended' || p.id === 'colossus') player.iframe = Math.max(player.iframe, p.duration);
+      // Invuln windows: dance/invincible/guardian/colossus (desc + physics-config)
+      if (p.id === 'invincible' || p.id === 'ascended' || p.id === 'colossus' || p.id === 'dance') {
+        if (player) player.iframe = Math.max(player.iframe, Math.max(0.2, p.duration || 0.4));
+      }
       if (player) player.superGlow = 1.4;
       if (fx.burst) fx.burst(p.col);
       if (fx.sfx) fx.sfx(p.id);
       if (fx.toast) fx.toast('PODER: ' + p.name.toUpperCase());
       if ((p.id === 'ascended' || p.id === 'colossus' || p.id === 'dance') && fx.hitFromPower) fx.hitFromPower(p.id, p.col);
+      // Instant impacts: esfera + haz first beam + tormenta kickoff
+      if ((p.id === 'voltz_sphere' || p.id === 'double_laser' || p.id === 'volt_storm') && fx.hitFromPower) {
+        /* staged in update — voltz waits charge; laser fires stage 0 next tick */
+      }
     },
 
     update(dt) {
@@ -165,12 +176,12 @@
       const player = this.api.getPlayer();
       const fx = this.api.fx || {};
       this.timeLeft -= dt;
-      if (p.id === 'invincible' || p.id === 'ascended' || p.id === 'colossus') {
+      if (p.id === 'invincible' || p.id === 'ascended' || p.id === 'colossus' || p.id === 'dance') {
         if (player) player.iframe = Math.max(player.iframe, Math.max(0, this.timeLeft));
       }
       if (p.id === 'voltz_sphere') {
         this.charge += dt;
-        if (this.stage === 0 && this.charge >= 0.4) { this.stage = 1; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
+        if (this.stage === 0 && this.charge >= 0.35) { this.stage = 1; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
       }
       if (p.id === 'double_laser') {
         this.charge += dt;
@@ -179,6 +190,7 @@
       }
       if (p.id === 'volt_storm') {
         this.charge += dt;
+        if (this.stage === 0) { this.stage = 1; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
         if (this.charge >= 0.5) { this.charge = 0; if (fx.hitFromPower) fx.hitFromPower(p.id, p.col); }
       }
       if (p.id === 'dance' || p.id === 'invincible' || p.id === 'shadow') {
@@ -194,17 +206,23 @@
       if ((p.id === 'flight' || p.id === 'ascended' || p.id === 'shadow' || p.id === 'volt_storm') && fx.trail && Math.random() < 0.5) {
         fx.trail(p.col);
       }
-      if (this.timeLeft <= 0) this.deactivate();
+      // Instant powers with duration 0 / near-zero: close after impact
+      if (p.duration <= 0 && this.stage >= 1) this.deactivate();
+      else if (this.timeLeft <= 0) this.deactivate();
     },
 
     deactivate() {
       const p = this.active;
       if (!p) return;
       const fx = this.api.fx || {};
+      const player = this.api.getPlayer && this.api.getPlayer();
       if (this._saved) {
         this._saved.rt.gravityMul = this._saved.gravityMul;
         this._saved.rt.speedMul = this._saved.speedMul;
         this._saved = null;
+      }
+      if (player && (p.id === 'colossus' || p.id === 'ascended')) {
+        player.sx = 1; player.sy = 1;
       }
       this.active = null; this.timeLeft = 0; this.stage = 0; this.charge = 0;
       if (global.RLPowerLog) global.RLPowerLog.closeLast(Date.now());

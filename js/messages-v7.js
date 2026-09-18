@@ -32,6 +32,10 @@
     L('kori-14', 'kori', 'MOTIVACION', 'Sincroniza el pulso. El resto es consecuencia. ' + SIGN),
     L('kori-15', 'kori', 'HUMOR_RD', 'Me pidieron un selfie en el portal. Les dije que primero el combo. ' + SIGN),
 
+    L('kori-16', 'kori', 'SEGURIDAD', 'No lo intentes en casa. El Distrito es pantalla, no tejado. ' + SIGN),
+    L('kori-17', 'kori', 'HUMOR_RD', 'Si se te fue el WiFi, igual se juega. Offline, hermano. ' + SIGN),
+    L('kori-18', 'kori', 'TIP', 'Pisa al enemigo: la barra baja. Tres SÚPER al jefe y listo. ' + SIGN),
+
     L('volta-01', 'volta', 'MOTIVACION', 'La sombra no compite con la luz. La usa. Usa lo que tengas. ' + SIGN),
     L('volta-02', 'volta', 'ESTUDIO', 'Aprender es entrenar en silencio para brillar en público. ' + SIGN),
     L('volta-03', 'volta', 'SEGURIDAD', 'Nada de lo que hago aquí funciona fuera de la pantalla. Cuida tu cuerpo. ' + SIGN),

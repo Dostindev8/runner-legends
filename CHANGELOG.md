@@ -1,5 +1,20 @@
 # Changelog
 
+## [v8.4] — 2026-09-17
+
+Auditoría móvil + poderes + Historia bloqueada. Calidad adaptativa (DPR/partículas) sin tocar reglas de juego.
+
+### Fixed
+- Onda Dembow ahora da iframe real (antes solo bloqueaba salto).
+- Coloso/Guardián restauran escala al agotar; Vector Cero no mata en huecos.
+- Fase Espectral alineada a 6s (`physics-config`).
+- HUD corazones sin `innerHTML` dinámico; título de resultados con `textContent`.
+
+### Added
+- Menú **Historia** 🔒 → toast offline exacto del Sr. Dostin.
+- `quality` adaptativo (low/med/high) para partículas/clima/DPR.
+- Frases hype extra firmadas Dostin Santana; hitboxes táctiles ≥44px + anti-scroll.
+
 ## [v8.3] — 2026-09-17
 
 Auditoría de hitbox vs sprite, pasivas de piloto/fragmentos y HUD más limpio en móvil. El agente del repo queda destilado en `DIGEST.md` (menos tokens).

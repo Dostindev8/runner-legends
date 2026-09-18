@@ -199,7 +199,12 @@
     'Tu combo vale más que tu distancia. — Dostin Santana',
     'La lluvia borra huellas, no errores. — Dostin Santana',
     'Un poder mal usado es un poder perdido. — Dostin Santana',
-    'Aquí se compite contra la física, no contra otros. — Dostin Santana'
+    'Aquí se compite contra la física, no contra otros. — Dostin Santana',
+    'Pisa al enemigo: la vida baja de verdad. — Dostin Santana',
+    'Si se te fue el WiFi, igual se juega. Offline, hermano. — Dostin Santana',
+    'Tres SÚPER al jefe y listo. No gastes de vaina. — Dostin Santana',
+    'El Distrito Neón no es cosplay: es IP original LCS. — Dostin Santana',
+    'Cierra el tramo: 8 KO, 250 m o el jefe. Después, el siguiente mundo. — Dostin Santana'
   ];
 
   /** Power catalog — 100% original IP (Ω.3 §6). */
@@ -229,7 +234,7 @@
       desc: 'Inmune con tema musical corto.', unlock: { type: 'base' }
     },
     {
-      id: 'shadow', name: 'Fase Espectral', icon: '◐', duration: 8, col: '#94a3b8', cost: 45,
+      id: 'shadow', name: 'Fase Espectral', icon: '◐', duration: 6, col: '#94a3b8', cost: 45,
       desc: 'Silueta translúcida, humo neón.', unlock: { type: 'base' }
     },
     {

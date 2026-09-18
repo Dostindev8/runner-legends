@@ -16,6 +16,18 @@
   const { PortalOutcomeResolver, WorldTransitionManager } = RLPortal;
 
   const runMods = { extraJump: 0, superMul: 1, iframeBonus: 0, shakeMul: 1 };
+  /** Adaptive presentation tier — never changes gameplay rules. */
+  const quality = { tier: 'high', dprCap: 3, particleMul: 1, weatherN: 48, trailChance: 14 };
+  (function detectQuality() {
+    const mem = navigator.deviceMemory || 4;
+    const cores = navigator.hardwareConcurrency || 4;
+    const narrow = Math.min(window.innerWidth || 400, window.innerHeight || 700) <= 400;
+    if (mem <= 2 || cores <= 2 || (narrow && mem < 4)) {
+      quality.tier = 'low'; quality.dprCap = 1.5; quality.particleMul = 0.45; quality.weatherN = 18; quality.trailChance = 6;
+    } else if (mem <= 4 || cores <= 4 || narrow) {
+      quality.tier = 'med'; quality.dprCap = 2; quality.particleMul = 0.7; quality.weatherN = 28; quality.trailChance = 10;
+    }
+  })();
 
   const CFG = {
     logicalH: 540, ground: 88,
@@ -391,11 +403,13 @@
       const up = () => { this.holding = false; this._release = true; };
       const stage = $('stage');
       stage.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('button,a,input,.panel,.nav-tab,.diff-btn,.world-tile')) return;
+        if (e.target.closest('button,a,input,.panel,.nav-tab,.diff-btn,.world-tile,.btn')) return;
+        e.preventDefault();
         dn();
       });
       stage.addEventListener('pointerup', up);
       stage.addEventListener('pointercancel', up);
+      stage.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
       window.addEventListener('keydown', (e) => {
         if (e.repeat) return;
         if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); dn(); }
@@ -431,15 +445,16 @@
       const vv = window.visualViewport;
       const vw = Math.max(1, Math.round((vv && vv.width) || window.innerWidth || document.documentElement.clientWidth));
       const vh = Math.max(1, Math.round((vv && vv.height) || window.innerHeight || document.documentElement.clientHeight));
-      this.dpr = Math.min(window.devicePixelRatio || 1, 3);
+      this.dpr = Math.min(window.devicePixelRatio || 1, quality.dprCap);
       // Zoom the camera on phones so the runner fills the frame (logicalH 540 looked tiny).
       const portrait = vh >= vw;
-      if (portrait && vw <= 520) this.h = 390;
+      if (portrait && vw <= 375) this.h = 380;
+      else if (portrait && vw <= 520) this.h = 390;
       else if (vh < 500) this.h = 360;
       else if (vw <= 768) this.h = 440;
       else this.h = CFG.logicalH;
       this.scale = vh / this.h;
-      this.w = vw / this.scale;
+      this.w = Math.max(280, vw / this.scale);
       this.c.width = Math.round(vw * this.dpr);
       this.c.height = Math.round(vh * this.dpr);
       this.ctx.imageSmoothingEnabled = true;
@@ -474,7 +489,8 @@
     }
     burst(x, y, n, opt) {
       opt = opt || {};
-      for (let i = 0; i < n; i++) {
+      const count = Math.max(1, Math.round(n * (quality.particleMul || 1)));
+      for (let i = 0; i < count; i++) {
         const a = rand(0, Math.PI * 2), sp = rand(opt.spMin || 40, opt.spMax || 220);
         this.pool.spawn((p) => {
           p.x = x; p.y = y; p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp - (opt.up || 0);
@@ -507,7 +523,7 @@
     constructor() { this.drops = []; this.t = 0; }
     rebuild(view) {
       this.drops = [];
-      const n = runtime.particle ? 48 : 0;
+      const n = runtime.particle ? (quality.weatherN || 48) : 0;
       for (let i = 0; i < n; i++) {
         this.drops.push({
           x: rand(0, view.w), y: rand(0, view.h),
@@ -715,7 +731,10 @@
       this.slideVx = lerp(this.slideVx, 0, clamp(dt * (2 + runtime.friction * 4), 0, 1));
       if (runtime.lateralPush) this.slideVx += Math.sin(performance.now() * 0.002) * runtime.lateralPush * dt * 0.02;
       this.slideVx = clamp(this.slideVx, -28, 28);
-      if (this.y > view.h + 40) this.kill(true);
+      if (this.y > view.h + 40) {
+        if (powers.freeFlight()) { this.y = Math.min(this.y, view.h - 8); this.vy = Math.min(this.vy, -40); }
+        else this.kill(true);
+      }
       this.sx = lerp(this.sx, 1, clamp(dt * 12, 0, 1));
       this.sy = lerp(this.sy, 1, clamp(dt * 12, 0, 1));
       this.iframe = Math.max(0, this.iframe - dt);
@@ -731,7 +750,7 @@
         if (this.trail.length > 10) this.trail.shift();
         for (const t of this.trail) t.life -= dt;
         this.trail = this.trail.filter((t) => t.life > 0);
-        if (Math.random() < dt * 14) {
+        if (Math.random() < dt * (quality.trailChance || 14)) {
           particles.burst(this.x - 8, this.y + this.h * 0.7, 1, {
             col: trailColor(), spMin: 10, spMax: 40, lifeMin: 0.15, lifeMax: 0.35,
             sMin: 2, sMax: 4, g: 40, up: 20
@@ -1473,7 +1492,7 @@
     if (cleared) unlockNextWorld(runtime.worldId);
     const stars = cleared ? (d > 500 || world.bossDown ? 3 : d > 280 ? 2 : 1) : (d > 400 ? 2 : 1);
     const title = $('rTitle');
-    if (title) title.innerHTML = cleared ? 'DISTRITO<br/>SUPERADO' : 'CARRERA<br/>TERMINADA';
+    if (title) title.textContent = cleared ? 'DISTRITO SUPERADO' : 'CARRERA TERMINADA';
     $('stars').textContent = ['★', '★', '★'].map((s, i) => (i < stars ? '★' : '☆')).join(' ');
     $('rDist').textContent = d; $('rCoins').textContent = c; $('rCombo').textContent = mc;
     $('rDiff').textContent = activeDiff.label;
@@ -1505,9 +1524,17 @@
     $('coins').textContent = economy.coins;
     $('dist').textContent = Math.round(world.dist);
     const hp = Math.max(0, player.hp);
-    $('hearts').innerHTML =
-      '<span style="color:#ff5a7a">' + '●'.repeat(hp) + '</span>' +
-      '<span style="color:#4a2740">' + '●'.repeat(CFG.maxHP - hp) + '</span>';
+    const hearts = $('hearts');
+    if (hearts) {
+      hearts.textContent = '';
+      const on = document.createElement('span');
+      on.style.color = '#ff5a7a';
+      on.textContent = '●'.repeat(hp);
+      const off = document.createElement('span');
+      off.style.color = '#4a2740';
+      off.textContent = '●'.repeat(CFG.maxHP - hp);
+      hearts.appendChild(on); hearts.appendChild(off);
+    }
     const pct = Math.round(economy.super * 100);
     $('superBar').firstElementChild.style.width = pct + '%';
     const ready = economy.super >= 0.4;
@@ -2222,6 +2249,13 @@
     $('againBtn').addEventListener('click', () => mgr.go('PLAY'));
     $('menuBtn').addEventListener('click', () => mgr.go('MENU'));
     $('introBtn').addEventListener('click', () => { audio.init(); save.intro = false; mgr.go('INTRO'); });
+    const histBtn = $('historiaBtn');
+    if (histBtn) {
+      histBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        flashToast('Lo siento, el Sr. Dostin aún no le da vida a esta sección');
+      });
+    }
     $('skipBtn').addEventListener('click', () => {
       if (window.RLSpectator && $('spectatorMsg') && !$('spectatorMsg').classList.contains('hidden')) {
         RLSpectator.skip(); return;
@@ -2287,7 +2321,11 @@
           r.push({ id: 'bestiary-10', pass: E && Object.keys(E.BY_WORLD).length === 10 });
           r.push({ id: 'stomp-falling', pass: C.isStomp({ dead: false, vy: 80, y: 10, h: 40 }, 42) === true });
           r.push({ id: 'stomp-rising', pass: C.isStomp({ dead: false, vy: -10, y: 10, h: 20 }, 40) === false });
-          r.push({ id: 'one-power', pass: !!(window.RLPowers && window.RLPowers.active === null || true) });
+          const P = window.RLPowers;
+          r.push({ id: 'powers-10', pass: !!(P && P.list && P.list().length === 10) });
+          r.push({ id: 'powers-unlocked', pass: !!(P && P.unlockedIds && P.unlockedIds(save).length === 10) });
+          r.push({ id: 'quality-tier', pass: !!(quality && quality.tier) });
+          r.push({ id: 'one-power', pass: !!(P && P.active === null || true) });
           return { pass: r.every((x) => x.pass), cases: r };
         }
       };
