@@ -1,0 +1,16 @@
+---
+description: Runner Legends canon — vanilla Canvas, IP LCS, ship rules
+alwaysApply: true
+---
+
+# Runner Legends
+
+Stack: `index.html` + `js/*.js` IIFE + Canvas 2D. **EXTEND-NEVER-OVERWRITE** — no migrar a React/Next/TS.
+
+IP: Logic Code Spot. Protagonista Kori Voltz. Cero Naruto / Goku / DBZ / Power Rangers.
+
+Combate: `js/combat-v8.js` + `js/enemies-v8.js`. Hitbox = sprite (`o.y`). Pisotón baja HP. Tramo cierra con 8 KO / 250 m / jefe.
+
+Agente: preferir `.cursor/skills/god-stack-ing/DIGEST.md` (corto). El SKILL.md largo solo si hace falta norma/ISO.
+
+Git: commit/push/Vercel solo con pedido explícito del usuario en el turno (salvo “sube a github y vercel”).

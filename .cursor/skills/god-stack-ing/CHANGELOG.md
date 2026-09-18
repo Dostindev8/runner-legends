@@ -1,5 +1,10 @@
 # CHANGELOG — god-stack-ing
 
+## v8.0.1 — 2026-09-17 · Destilación de tokens
+
+- `DIGEST.md` es el protocolo ejecutable (~80 líneas). El SKILL.md largo queda como archivo de referencia.
+- Este repo: `.cursor/rules/runner-legends.mdc` + `AGENTS.md` apuntan al digest.
+
 ## v8.0 — 2026-09-06 · Edición Normativa integrada (PDF v2.0)
 
 - Integra **GOD-STACK-ING Edición Normativa 2.0** (ISO/IEC 25010, 12207, 29119, 27001, NIST SSDF, CMMI).

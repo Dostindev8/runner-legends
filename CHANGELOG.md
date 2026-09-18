@@ -1,5 +1,17 @@
 # Changelog
 
+## [v8.3] — 2026-09-17
+
+Auditoría de hitbox vs sprite, pasivas de piloto/fragmentos y HUD más limpio en móvil. El agente del repo queda destilado en `DIGEST.md` (menos tokens).
+
+### Fixed
+- El enemigo ya no se dibuja 6px fuera de su caja de colisión (el pisotón coincidía con lo que ves).
+- El SÚPER no propaga el tap al salto.
+
+### Changed
+- Stats reales del piloto activo en el menú; sets de fragmentos aplican boosts en carrera.
+- `Cache-Control` en `/js/*` + SW `rl-v8-3-audit`.
+
 ## [v8.2] — 2026-09-17
 
 El tramo tiene cierre: 8 KO, 250 m o jefe. El pisotón ahora registra daño (vy>50, ventana de pies amplia) y la barra de HP se ve siempre. Tres SÚPER derriban al jefe; el resto se elimina a pisotones.

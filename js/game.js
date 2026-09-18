@@ -15,6 +15,8 @@
   const { WORLDS, getWorld, buildRuntimeConfig } = RLWorlds;
   const { PortalOutcomeResolver, WorldTransitionManager } = RLPortal;
 
+  const runMods = { extraJump: 0, superMul: 1, iframeBonus: 0, shakeMul: 1 };
+
   const CFG = {
     logicalH: 540, ground: 88,
     gravity: 2200, jumpVel: -900, jumpCut: 0.45, doubleJumpVel: -790,
@@ -173,6 +175,28 @@
       flashToast('SET COMPLETO · boost menor');
     }
     persist();
+  }
+
+  function applyRunBoosts() {
+    runMods.extraJump = 0;
+    runMods.superMul = 1;
+    runMods.iframeBonus = 0;
+    runMods.shakeMul = 1;
+    const C = window.RLContentV6;
+    const ch = C && C.getCharacter ? C.getCharacter(save.activeChar) : null;
+    if (ch && ch.stats) {
+      player.jumpMul *= 0.88 + (ch.stats.jump || 0.6) * 0.25;
+      runtime.speedMul *= 0.92 + (ch.stats.vel || 0.6) * 0.16;
+    }
+    const fr = save.fragmentRewards || {};
+    if (fr.air_jump) runMods.extraJump = 1;
+    if (fr.super_charge) runMods.superMul = 1.15;
+    if (fr.bubble_iframe) runMods.iframeBonus = 0.28;
+    if (fr.friction_assist) runtime.friction = Math.min(1, (runtime.friction || 1) + 0.12);
+    if (fr.heat_resist) runtime.heatSlow = 1;
+    if (fr.shake_dampen) runMods.shakeMul = 0.45;
+    if (fr.final_boost && runtime.worldId === 'final') runtime.speedMul *= 1.08;
+    if (fr.trail_boost_neon || fr.trail_boost_gold) runMods.superMul *= 1.06;
   }
 
   function grantAchievement(id) {
@@ -381,7 +405,9 @@
         if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') up();
       });
       const sb = $('superBtn');
-      if (sb) sb.addEventListener('pointerdown', (e) => { e.preventDefault(); this.superPressed = true; });
+      if (sb) sb.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation(); this.superPressed = true;
+      });
     }
     consumeJump() { const q = this.jumpQueued; this.jumpQueued = false; return q; }
     consumeRelease() { const r = this._release; this._release = false; return r; }
@@ -433,7 +459,7 @@
 
   class CameraShake {
     constructor() { this.trauma = 0; this.t = 0; }
-    add(a) { this.trauma = clamp(this.trauma + a, 0, 1); }
+    add(a) { this.trauma = clamp(this.trauma + a * (runMods.shakeMul || 1), 0, 1); }
     update(dt) { this.t += dt * 30; this.trauma = Math.max(0, this.trauma - dt * 1.6); }
     get offset() {
       const s = this.trauma * this.trauma * 12;
@@ -655,7 +681,7 @@
       const gY = view.groundY;
       const coyote = Math.max(CFG.coyote * 0.75, activeDiff.coyote * (runtime.reactionWindow || 1));
       const buffer = Math.max(CFG.buffer * 0.75, activeDiff.buffer);
-      let maxJumps = 2;
+      let maxJumps = 2 + (runMods.extraJump || 0);
       if (powers.freeFlight()) maxJumps = 99;
       if (input.consumeJump() && !powers.jumpLocked()) this.bufferT = buffer;
       this.bufferT = Math.max(0, this.bufferT - dt);
@@ -715,7 +741,7 @@
     }
     hurt() {
       if (this.iframe > 0 || this.dead) return;
-      this.hp--; this.iframe = CFG.iframes; shake.add(0.55); clock.freeze(0.06);
+      this.hp--; this.iframe = CFG.iframes + (runMods.iframeBonus || 0); shake.add(0.55); clock.freeze(0.06);
       particles.burst(this.x, this.y + this.h * 0.4, 18, { col: '#ff5a7a', spMax: 260, up: 60 });
       economy.breakCombo();
       bus.emit('hurt');
@@ -748,7 +774,7 @@
     }
     buff(mult, t) { this.mult = mult; this.buffT = t; }
     update(dt) {
-      this.super = Math.min(1, this.super + CFG.superChargePerSec * dt);
+      this.super = Math.min(1, this.super + CFG.superChargePerSec * (runMods.superMul || 1) * dt);
       if (this.buffT > 0) this.buffT -= dt; else this.mult = 1;
       if (this.combo > 0) {
         this.comboT -= dt;
@@ -1275,6 +1301,8 @@
     }
     player.reset();
     player.jumpMul = 1 + (runtime.jumpMul - 1);
+    applyRunBoosts();
+    player.iframe = Math.max(player.iframe, runMods.iframeBonus);
     world.reset();
     economy.reset();
     weatherFX.rebuild(view);
@@ -1538,8 +1566,7 @@
       ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(o.x + 6, o.y + 6, o.w - 12, 4);
     });
     world.drones.forEach((o) => {
-      const bob = (o.pattern === 'ground' || o.pattern === 'static') ? 0 : Math.sin(o.ph) * 6;
-      const cy = o.y + bob;
+      const cy = o.y;
       const col = o.col || '#4a7090';
       if (o.flash > 0) ctx.fillStyle = '#ffffff';
       else {
@@ -1985,9 +2012,14 @@
   function refreshMenuUI() {
     announceNewPowers();
     const cb = $('charBtn');
-    if (cb) {
-      const ch = RLContentV6.getCharacter(save.activeChar);
-      cb.textContent = ch ? ch.name : 'Personaje';
+    const ch = RLContentV6.getCharacter(save.activeChar);
+    if (cb) cb.textContent = ch ? ch.name : 'Personaje';
+    const hn = $('heroName'); if (hn && ch) hn.textContent = ch.name.toUpperCase();
+    const hb = $('heroBlurb'); if (hb && ch) hb.textContent = ch.blurb || '';
+    if (ch && ch.stats) {
+      const sv = $('statVel'); if (sv) sv.style.width = Math.round(ch.stats.vel * 100) + '%';
+      const sj = $('statJump'); if (sj) sj.style.width = Math.round(ch.stats.jump * 100) + '%';
+      const sc = $('statCombo'); if (sc) sc.style.width = Math.round(ch.stats.combo * 100) + '%';
     }
     $('profileName').textContent = sanitizeName(save.name);
     $('profileLevel').textContent = 'Nivel ' + save.level;

@@ -258,6 +258,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
   .diff-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .char-card{grid-template-columns:1fr;text-align:center}
   .char-avatar{margin:0 auto}
+  #weatherChip,#ruleChip{display:none}
   .hud-top .arc-wrap{width:min(88px,22vw);height:28px}
   .graffiti{flex-direction:column;align-items:center;gap:2px}
   .graffiti span:last-child{text-align:center}
@@ -338,19 +339,19 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
         <div class="title-block">
           <div class="crown" aria-hidden="true">◆</div>
           <div class="title-lg">RUNNER<br/>LEGENDS</div>
-          <div class="sub">DISTRITO NEÓN · V8.2</div>
+          <div class="sub">DISTRITO NEÓN · V8.3</div>
         </div>
 
         <div class="glass char-card">
           <div class="char-avatar" aria-hidden="true"></div>
           <div class="char-meta">
-            <h2>KORI VOLTZ</h2>
-            <p>Guerrero de energía. Explosión Estelar lista para el Distrito.</p>
+            <h2 id="heroName">KORI VOLTZ</h2>
+            <p id="heroBlurb">Guerrero de energía. Explosión Estelar lista para el Distrito.</p>
           </div>
           <div class="stats">
-            <div class="stat">VEL<div class="bar"><i style="width:60%"></i></div></div>
-            <div class="stat">SALTO<div class="bar"><i style="width:60%"></i></div></div>
-            <div class="stat">COMBO<div class="bar"><i style="width:80%"></i></div></div>
+            <div class="stat">VEL<div class="bar"><i id="statVel" style="width:60%"></i></div></div>
+            <div class="stat">SALTO<div class="bar"><i id="statJump" style="width:60%"></i></div></div>
+            <div class="stat">COMBO<div class="bar"><i id="statCombo" style="width:80%"></i></div></div>
           </div>
         </div>
 
