@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Valle Dorado">
+  <defs>
+    <linearGradient id="a" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a2810"/>
+      <stop offset="1" stop-color="#ffd24a"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="28" fill="url(#a)"/>
+  <ellipse cx="80" cy="180" rx="70" ry="28" fill="#c49220"/>
+  <ellipse cx="170" cy="190" rx="90" ry="32" fill="#e8b84a"/>
+  <circle cx="200" cy="56" r="22" fill="#fff3c0"/>
+</svg>

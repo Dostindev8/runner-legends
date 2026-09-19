@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Distrito Neón">
+  <defs>
+    <linearGradient id="a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12043a"/>
+      <stop offset="1" stop-color="#22e6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="28" fill="url(#a)"/>
+  <rect x="30" y="110" width="40" height="90" fill="#1a0750" stroke="#ff2bd6"/>
+  <rect x="80" y="80" width="50" height="120" fill="#160a44" stroke="#22e6ff"/>
+  <rect x="145" y="100" width="36" height="100" fill="#1a0750" stroke="#ff2bd6"/>
+  <rect x="190" y="70" width="36" height="130" fill="#0a1830" stroke="#22e6ff"/>
+  <circle cx="200" cy="48" r="18" fill="#ffe08a"/>
+</svg>

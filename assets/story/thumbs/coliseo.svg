@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Coliseo">
+  <rect width="256" height="256" rx="28" fill="#2a1410"/>
+  <ellipse cx="128" cy="150" rx="90" ry="50" fill="none" stroke="#ffb060" stroke-width="8"/>
+  <ellipse cx="128" cy="140" rx="70" ry="36" fill="none" stroke="#ffd24a" stroke-width="6"/>
+  <rect x="118" y="70" width="20" height="70" fill="#ffb060"/>
+</svg>

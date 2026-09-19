@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Cumbres de Hielo">
+  <rect width="256" height="256" rx="28" fill="#0a2a4a"/>
+  <polygon points="40,200 90,80 140,200" fill="#9ff0ff"/>
+  <polygon points="110,200 170,60 230,200" fill="#c8f7ff"/>
+  <circle cx="48" cy="48" r="16" fill="#e8f4ff"/>
+</svg>

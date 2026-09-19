@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Ciudad Celestial">
+  <rect width="256" height="256" rx="28" fill="#1a2860"/>
+  <ellipse cx="70" cy="170" rx="50" ry="18" fill="#a8c8ff"/>
+  <ellipse cx="160" cy="150" rx="70" ry="22" fill="#d0dcff"/>
+  <rect x="150" y="80" width="24" height="70" fill="#c8d8ff"/>
+  <circle cx="200" cy="50" r="14" fill="#fff6c8"/>
+</svg>

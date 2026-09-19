@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Kori Voltz">
+  <rect width="256" height="256" rx="32" fill="#12043a"/>
+  <circle cx="128" cy="100" r="48" fill="#7af0ff"/>
+  <rect x="78" y="150" width="100" height="70" rx="28" fill="#22e6ff"/>
+  <circle cx="112" cy="96" r="6" fill="#12043a"/>
+  <circle cx="144" cy="96" r="6" fill="#12043a"/>
+</svg>
