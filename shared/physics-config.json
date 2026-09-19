@@ -31,6 +31,7 @@
     "LANZA_ESTELAR":    { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 550,   "cost": 55 },
     "ESCUDO_CUANTICO":  { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "next_hit",  "maxDurationMs": 1800,  "cost": 50 },
     "BATE_CARGA":       { "maxSpeedMult": 1.00, "maxAltitudePx": 250, "invuln": "all",       "maxDurationMs": 2400,  "cost": 85 },
+    "PISTOLA_ESTELAR":  { "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 8000,  "cost": 55 },
     "EXPLOSION_ESTELAR":{ "maxSpeedMult": 1.00, "maxAltitudePx": 210, "invuln": "none",      "maxDurationMs": 0,     "cost": 100 }
   },
   "combat": {
@@ -54,6 +55,35 @@
     "star_lance": "LANZA_ESTELAR",
     "quantum_shield": "ESCUDO_CUANTICO",
     "freight_bat": "BATE_CARGA",
+    "star_pistol": "PISTOLA_ESTELAR",
     "super": "EXPLOSION_ESTELAR"
+  },
+  "enemyLasers": {
+    "telegraphMs": { "normal": 700, "hard": 600, "expert": 500, "legendary": 420 },
+    "hitboxVisualScale": 0.85,
+    "iframeAfterHitSec": 1.2,
+    "perfectDodgePx": 60
+  },
+  "celebration": {
+    "durationSec": 3.2,
+    "skipAfterSec": 1.2,
+    "reducedDurationSec": 1.4
+  },
+  "starPistol": {
+    "baseRate": 2.0,
+    "burstRate": 3.3,
+    "durationSec": 8,
+    "maxShots": 12,
+    "damage": 1,
+    "bossDamage": 0.5,
+    "pool": 32,
+    "assembleSec": 0.9
+  },
+  "mount": {
+    "allowFlightPistolCombo": false
+  },
+  "quality": {
+    "tiers": ["ULTRA_4K", "ALTA", "MEDIA", "BAJA"],
+    "internalMax": [3840, 2160]
   }
 }

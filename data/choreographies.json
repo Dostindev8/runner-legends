@@ -1,0 +1,12 @@
+{
+  "version": "7.0.0",
+  "fallback": "kori_voltz",
+  "dances": {
+    "kori_voltz": ["volt_spin", "core_pulse", "visor_flash"],
+    "shino_kage": ["phase_step", "quiet_bow", "shadow_clap"],
+    "mc_rumor": ["mic_drop", "beat_slide", "crowd_point"],
+    "leo_dorado": ["coin_toss", "cape_sweep", "victory_pose"],
+    "don_cash": ["stack_flex", "tie_adjust", "gold_wave"],
+    "neon_groove": ["grid_lock", "wave_arm", "strobe_step"]
+  }
+}

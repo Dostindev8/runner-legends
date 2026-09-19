@@ -1,0 +1,5 @@
+{
+  "version": "7.0.0",
+  "note": "Solo se solicitan URLs listadas. Vacío = procedural, cero 404.",
+  "layers": []
+}

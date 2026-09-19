@@ -1,0 +1,20 @@
+675f972 fix: activate any selected power once SUPER is ready
+d8790ca feat: unique power signatures plus Freight Bat ride smash
+2f5ef88 feat: Nova Protocol v3.1 — hunter overlay, difficulty scaling, nova events, powers, weather, invasions, distraction, responsive polish
+2141b8b Ship v8.4: mobile quality tier, solid power cleanup, locked Historia toast, safer HUD.
+7db9552 Align enemy sprites with hitboxes and distill the agent to DIGEST so play and tooling stay tight.
+f30ccfc Make enemy HP tick on stomp and close each district so the next world unlocks.
+be17523 feat(combat): world bestiary and power damage/stun profiles
+2d3b94a Arsenal v8.0 — poderes, combate e integridad (#2)
+1e73f65 feat: zoom mobile camera, larger HUD/intro, and 90 character voice lines
+062d288 Merge pull request #1 from Dostindev8/feature/powers-system-omega-3
+a7df71c feat: add GTA-style power selector and spectator overlay (Ω.3)
+04cfafc Ship Runner Legends v6.0: portal blackout swap, bosses, PWA offline-first.
+99fb45a Ship Runner Legends v3.2: trails shop, achievements, combo HUD, and richer feel.
+de60ca7 Repair illicit Fractal unlocks by enforcing contiguous world progression on load.
+6fe601d Harden portal unlocks, save sanitization, and CSP; pin GOD-STACK-ING v8.0 in-repo.
+2fada35 Harden responsive menu: opaque glass panels and no canvas Kori under UI.
+46c7128 Make the web slice fully responsive across mobile, tablet, and short landscape viewports.
+47012ff Add GitHub Actions workflow stubs for backend and Unity CI.
+c896156 Ship Runner Legends v3.1: portal outcome resolver, 10 worlds, and premium web slice.
+9ac8261 Temporarily untrack CI workflows pending GitHub workflow OAuth scope.

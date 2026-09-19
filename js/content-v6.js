@@ -264,6 +264,10 @@
     {
       id: 'freight_bat', name: 'Bate de Carga', icon: '🏏', duration: 2.4, col: '#fbbf24', cost: 85,
       desc: 'Camión de circuito LCS. Telegrafía 450ms y bateas desde el toldo.', unlock: { type: 'base' }
+    },
+    {
+      id: 'star_pistol', name: 'Pistola Estelar', icon: '✶', duration: 8, col: '#fde68a', cost: 55,
+      desc: 'Cañón de partículas original LCS. Auto-apunta; mantén mira para ráfaga.', unlock: { type: 'base' }
     }
   ];
 

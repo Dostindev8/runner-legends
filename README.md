@@ -1,4 +1,4 @@
-# Runner Legends — Distrito Neón (Web Slice v7.0)
+# Runner Legends — Distrito Neón (Web Slice V7.0 Estelar)
 
 > IP 100% original de **Logic Code Spot**. Ningún personaje, marca o persona real es usado ni imitado.
 

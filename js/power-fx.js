@@ -182,6 +182,10 @@
       } else if (id === 'flight') {
         ctx.fillStyle = 'rgba(56,189,248,0.35)';
         ctx.beginPath(); ctx.moveTo(x - 10, y + h); ctx.lineTo(x, y + h + 18); ctx.lineTo(x + 10, y + h); ctx.fill();
+      } else if (id === 'star_pistol') {
+        ctx.strokeStyle = 'rgba(253,230,138,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x + 18, y + 22, 16 + Math.sin(st.t * 14) * 4, 0, 6.283); ctx.stroke();
       }
 
       for (let i = 0; i < sparks.length; i++) {

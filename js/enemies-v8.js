@@ -20,7 +20,8 @@
     nova_pulse: { dmg: 2, stun: 0.2, slow: 0, radius: 900 },
     star_lance: { dmg: 4, stun: 0.15, slow: 0, pierce: 1 },
     quantum_shield: { dmg: 0, stun: 0, slow: 0 },
-    freight_bat: { dmg: 4, stun: 0.45, slow: 0.15, radius: 430 }
+    freight_bat: { dmg: 4, stun: 0.45, slow: 0.15, radius: 430 },
+    star_pistol: { dmg: 1, stun: 0.08, slow: 0, pierce: 2 }
   };
 
   function E(id, name, hp, stompable, telegraphMs, pattern, col, w, h) {

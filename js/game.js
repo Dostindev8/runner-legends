@@ -27,6 +27,7 @@
     } else if (mem <= 4 || cores <= 4 || narrow) {
       quality.tier = 'med'; quality.dprCap = 2; quality.particleMul = 0.7; quality.weatherN = 28; quality.trailChance = 10;
     }
+    if (window.RLEstelar && window.RLEstelar.init) window.RLEstelar.init(quality);
   })();
 
   const CFG = {
@@ -371,7 +372,7 @@
     powerId(id) {
       if (!this.can('pwr_' + (id || 'x'), 90)) return;
       if (id === 'freight_bat') { this.beep(90, 0.18, 'sawtooth', 0.05); this.beep(220, 0.12, 'square', 0.03); this.chord([140, 180], 0.2, 'triangle', 0.04); return; }
-      if (id === 'double_laser') { this.beep(880, 0.08, 'square', 0.03); this.beep(1320, 0.1, 'sawtooth', 0.02); return; }
+      if (id === 'star_pistol') { this.beep(660, 0.06, 'square', 0.03); this.beep(990, 0.08, 'sawtooth', 0.02); return; }
       if (id === 'voltz_sphere') { this.beep(240, 0.2, 'sine', 0.04); this.beep(720, 0.12, 'triangle', 0.03); return; }
       if (id === 'volt_storm') { this.chord([980, 1240, 1560], 0.12, 'square', 0.028); return; }
       if (id === 'dance') { this.beep(200, 0.08, 'square', 0.04); this.beep(300, 0.08, 'triangle', 0.03); return; }
@@ -1353,6 +1354,8 @@
     if (window.RLCombat) window.RLCombat.reset();
     if (window.RLPowerLog) window.RLPowerLog.reset();
     if (window.RLNova) window.RLNova.reset();
+    if (window.RLEstelar && window.RLEstelar.resetRun) window.RLEstelar.resetRun();
+    world._v7cele = false;
     $('diffChip').textContent = activeDiff.chip;
     $('ruleChip').textContent = runtime.rule.icon + ' ' + runtime.rule.label;
     $('worldChip').textContent = runtime.world.name.toUpperCase();
@@ -1591,6 +1594,7 @@
     if (pc) {
       if (powers.active) { pc.hidden = false; pc.textContent = powers.label(); } else pc.hidden = true;
     }
+    if (window.RLEstelar && window.RLEstelar.syncHud) window.RLEstelar.syncHud(economy, world, player);
   }
 
   // —— Draw helpers ——
@@ -1917,6 +1921,14 @@
     }
     if (mgr.state === 'PLAY') {
       powers.update(raw);
+      if (window.RLEstelar) {
+        window.RLEstelar.setView(view);
+        window.RLEstelar.update(dt, raw);
+      }
+      if (window.RLEstelar && window.RLEstelar.blocksWorld()) {
+        particles.update(raw); backdrop.update(raw); weatherFX.update(raw, view); syncHUD();
+        return;
+      }
       if (input.consumeSuper()) fireSuper();
       if (!player.dead) {
         world.update(dt, player);
@@ -1925,6 +1937,12 @@
         economy.update(dt);
         if (window.RLCombat) window.RLCombat.update(dt);
         if (window.RLNova) window.RLNova.update(dt, raw);
+        if (!world._v7cele && (world.kills >= CFG.stageKills || world.bossDown || world.dist >= CFG.stageDist)) {
+          world._v7cele = true;
+          unlockNextWorld(runtime.worldId);
+          persist();
+          if (window.RLEstelar) window.RLEstelar.startCele({ persist: persist, charId: save.activeChar });
+        }
       } else world.update(0, player);
       particles.update(raw); backdrop.update(raw); weatherFX.update(raw, view); syncHUD();
     } else if (mgr.state === 'TRANSIT') {
@@ -1950,10 +1968,12 @@
       backdrop.draw(ctx, view);
       if (mgr.state === 'PLAY' || mgr.state === 'RESULTS') {
         drawGround(ctx, view); drawWorld(ctx, view); particles.draw(ctx);
+        if (window.RLEstelar) window.RLEstelar.drawWorld(ctx, view, world);
         if (!player.dead || mgr.state === 'PLAY') {
           if (window.RLPowerFX) window.RLPowerFX.drawUnder(ctx, view, player);
           drawKori(ctx, view, false);
           if (window.RLPowerFX) window.RLPowerFX.drawOver(ctx, view, player);
+          if (window.RLEstelar) window.RLEstelar.drawOver(ctx, view, player);
         }
         if (window.RLNova) window.RLNova.draw(ctx, view);
         weatherFX.draw(ctx, view);
@@ -2195,7 +2215,19 @@
         <label>Música <input type="range" id="volMusic" min="0" max="1" step="0.05" value="${a.music}" /></label>
         <label>SFX <input type="range" id="volSfx" min="0" max="1" step="0.05" value="${a.sfx}" /></label>
         <label>Voces / Risas <input type="range" id="volVoice" min="0" max="1" step="0.05" value="${a.voice}" /></label>
-        <p class="meta">Audio sintético precargado · Offline-first PWA</p></div>`;
+        <p class="meta">Audio sintético precargado · Offline-first PWA</p>
+        <p class="meta" style="margin-top:10px">Gráficas V7</p>
+        <label>Calidad
+          <select id="v7Quality">
+            <option value="ULTRA_4K">Ultra 4K</option>
+            <option value="ALTA">Alta</option>
+            <option value="MEDIA">Media</option>
+            <option value="BAJA">Baja</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="v7Reduced" /> Reducir movimiento / efectos</label>
+        <label><input type="checkbox" id="v7Haptic" /> Háptica</label>
+        </div>`;
       setTimeout(() => {
         $('saveName')?.addEventListener('click', () => {
           save.name = sanitizeName($('nameInput').value); persist(); refreshMenuUI();
@@ -2208,6 +2240,24 @@
           });
         };
         bindVol('volMusic', 'music'); bindVol('volSfx', 'sfx'); bindVol('volVoice', 'voice');
+        const qSel = $('v7Quality');
+        if (qSel && window.RLEstelar) {
+          try { qSel.value = localStorage.getItem('rl_v7_quality') || 'ALTA'; } catch (e) { qSel.value = 'ALTA'; }
+          qSel.addEventListener('change', () => {
+            window.RLEstelar.setQuality(qSel.value, quality);
+            view.resize();
+          });
+        }
+        const rm = $('v7Reduced');
+        if (rm && window.RLEstelar) {
+          rm.checked = !!window.RLEstelar.reduced();
+          rm.addEventListener('change', () => window.RLEstelar.setReduced(rm.checked));
+        }
+        const hp = $('v7Haptic');
+        if (hp && window.RLEstelar) {
+          hp.checked = true;
+          hp.addEventListener('change', () => window.RLEstelar.setHaptic(hp.checked));
+        }
       }, 0);
     } else if (which === 'roster') {
       title.textContent = 'Hub de Personajes';
@@ -2265,6 +2315,8 @@
       getEconomy: () => economy,
       getPlayer: () => player,
       getRuntime: () => runtime,
+      getWorld: () => world,
+      getDiff: () => activeDiff.id,
       fx: powerFX,
       persist
     });
@@ -2372,6 +2424,13 @@
         nova: () => window.RLNova && window.RLNova.snapshot(),
         novaHit: (n) => window.RLNova && window.RLNova.qaHit(n),
         novaSpawn: () => window.RLNova && window.RLNova.qaSpawn(),
+        spawnLaser: (type) => window.RLEstelar && window.RLEstelar.spawnLaser(type || 'bolt_low', view, world, activeDiff.id),
+        forceGoal: () => window.RLEstelar && window.RLEstelar.forceGoal({ persist, charId: save.activeChar }),
+        usePower: (id) => window.RLPowers && window.RLPowers.choose(id),
+        setQuality: (tier) => window.RLEstelar && window.RLEstelar.setQuality(tier, quality),
+        setMount: (on) => { /* presentation only; flight still via powers */ return !!on; },
+        stats: () => window.RLEstelar && window.RLEstelar.stats(),
+        estelar: () => window.RLEstelar,
         filterClean: () => view.ctx.filter === 'none' || view.ctx.filter === '',
         selftest() {
           const C = window.RLCombat, E = window.RLEnemies, N = window.RLNova;
@@ -2385,9 +2444,9 @@
           r.push({ id: 'stomp-falling', pass: C.isStomp({ dead: false, vy: 80, y: 10, h: 40 }, 42) === true });
           r.push({ id: 'stomp-rising', pass: C.isStomp({ dead: false, vy: -10, y: 10, h: 20 }, 40) === false });
           const P = window.RLPowers;
-          r.push({ id: 'powers-14', pass: !!(P && P.list && P.list().length === 14) });
-          r.push({ id: 'powers-unlocked', pass: !!(P && P.unlockedIds && P.unlockedIds(save).length === 14) });
-          r.push({ id: 'powers-unique', pass: !!(P && P.list && (function () { const ids = P.list().map((x) => x.id); return ids.length === new Set(ids).size && ids.indexOf('freight_bat') >= 0; })()) });
+          r.push({ id: 'powers-15', pass: !!(P && P.list && P.list().length === 15) });
+          r.push({ id: 'powers-unlocked', pass: !!(P && P.unlockedIds && P.unlockedIds(save).length === 15) });
+          r.push({ id: 'powers-unique', pass: !!(P && P.list && (function () { const ids = P.list().map((x) => x.id); return ids.length === new Set(ids).size && ids.indexOf('star_pistol') >= 0; })()) });
           r.push({ id: 'quality-tier', pass: !!(quality && quality.tier) });
           r.push({ id: 'one-power', pass: !!(P && P.active === null || true) });
           r.push({ id: 'nova-module', pass: !!(N && N.snapshot) });

@@ -238,6 +238,7 @@
       if ((p.id === 'flight' || p.id === 'shadow' || p.id === 'volt_storm') && fx.trail && Math.random() < 0.5) {
         fx.trail(p.col);
       }
+      if (p.id === 'star_pistol' && window.RLEstelar) { /* cadence lives in RLEstelar */ }
       if (p.duration <= 0 && this.stage >= 1) this.deactivate();
       else if (this.timeLeft <= 0) this.deactivate();
     },

@@ -1,5 +1,19 @@
 # Changelog
 
+## [V7.0 Estelar] — 2026-09-18
+
+HUD premium (retrato, corazones, monedas, KO), láseres enemigos con telegrafía, baile al cerrar tramo, **Pistola Estelar** y **Montura Alada** (skin de vuelo). Overlay `js/v7-estelar.js` sin reescribir el motor.
+
+### Added
+- `js/v7-estelar.js`, `docs/V7_AUDIT.md`, `docs/ART_BRIEF.md`, `docs/V7_NOTES.md`
+- Claves `enemyLasers` / `starPistol` / `mount` / `quality` en physics-config (solo añadir)
+- Test Node `tests/laser-solvability.test.js`
+
+### Changed
+- Pastilla SINCRONIZADO bajo los metros (ya no tapa la distancia)
+- Combo vertical con margen + safe-area; botón mira solo con pistola activa
+
+
 ## [v8.7] — 2026-09-17
 
 El selector ya no ignora el toque: SÚPER listo (≥40%) activa **cualquier** poder elegido. El % listado es gasto, no veto silencioso.
