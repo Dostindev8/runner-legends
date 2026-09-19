@@ -26,6 +26,9 @@
       guideCharacterId: cfg.guideCharacterId,
       specialRule: cfg.specialRule,
       engineWorldId: cfg.engineWorldId,
+      cosmos: cfg.cosmos || 'neon',
+      rival: cfg.rival || '',
+      obstacle: cfg.obstacle || '',
       levels: cfg.levels
     };
   }
@@ -48,6 +51,9 @@
             guideCharacterId: 'char-kori-voltz',
             specialRule: 'velocidad_extrema',
             engineWorldId: 'neon',
+            cosmos: 'neon',
+            rival: 'Eco Neón',
+            obstacle: 'Luces rápidas y plataformas que parpadean',
             levels: [
               nivel('lvl-neon-01', 1, 'Prueba de Velocidad',
                 ['Llega a la meta', 'Evita los obstáculos', 'Completa en menos de 2:00'], 150, ALWAYS),
@@ -76,6 +82,9 @@
             guideCharacterId: 'char-yara-sahn',
             specialRule: 'tormentas_de_arena',
             engineWorldId: 'golden',
+            cosmos: 'golden',
+            rival: 'Remolino Dorado',
+            obstacle: 'Viento de arena que empuja con suavidad',
             levels: [
               nivel('lvl-golden-01', 1, 'Dunas Doradas',
                 ['Atraviesa las dunas', 'Escucha el viento amigo', 'Llega a la meta'], 160, ALWAYS),
@@ -104,6 +113,9 @@
             guideCharacterId: 'char-bjorn-kael',
             specialRule: 'superficies_resbaladizas',
             engineWorldId: 'ice',
+            cosmos: 'ice',
+            rival: 'Copo Travesura',
+            obstacle: 'Hielo resbaladizo y puentes de aurora',
             levels: [
               nivel('lvl-ice-01', 1, 'Primer Copo',
                 ['Desliza con cuidado', 'Llega a la meta', 'Disfruta la nieve'], 170, ALWAYS),
@@ -132,6 +144,9 @@
             guideCharacterId: 'char-rekka-dorn',
             specialRule: 'oleadas_de_obstaculos',
             engineWorldId: 'coliseum',
+            cosmos: 'coliseum',
+            rival: 'Eco de Ovación',
+            obstacle: 'Oleadas de aros y columnas que hay que saltar',
             levels: [
               nivel('lvl-coliseo-01', 1, 'Entrada al Coliseo',
                 ['Saluda al público', 'Llega a la meta', 'Sigue el ritmo'], 180, ALWAYS),
@@ -160,6 +175,9 @@
             guideCharacterId: 'char-nyx-thal',
             specialRule: 'gravedad_alterada',
             engineWorldId: 'abyssal',
+            cosmos: 'abyssal',
+            rival: 'Burbuja Viajera',
+            obstacle: 'Gravedad suave y corrientes de luz',
             levels: [
               nivel('lvl-abyss-01', 1, 'Primer Flote',
                 ['Flota con suavidad', 'Llega a la meta', 'Prueba saltos largos'], 190, ALWAYS),
@@ -188,6 +206,9 @@
             guideCharacterId: 'char-alto-mira',
             specialRule: 'escenario_cambiante',
             engineWorldId: 'celestial',
+            cosmos: 'celestial',
+            rival: 'Nube Cambiante',
+            obstacle: 'Puentes de cielo que se mueven despacio',
             levels: [
               nivel('lvl-celestial-01', 1, 'Nubes de Plata',
                 ['Camina sobre nubes', 'Llega a la meta', 'Mira el cielo'], 200, ALWAYS),

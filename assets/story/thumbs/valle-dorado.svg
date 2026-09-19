@@ -1,12 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Valle Dorado">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Planeta Valle Dorado">
   <defs>
-    <linearGradient id="a" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#4a2810"/>
-      <stop offset="1" stop-color="#ffd24a"/>
-    </linearGradient>
+    <radialGradient id="atm" cx="32%" cy="28%" r="72%">
+      <stop offset="0%" stop-color="#fff6c8"/>
+      <stop offset="40%" stop-color="#e8a830"/>
+      <stop offset="100%" stop-color="#3a1808"/>
+    </radialGradient>
   </defs>
-  <rect width="256" height="256" rx="28" fill="url(#a)"/>
-  <ellipse cx="80" cy="180" rx="70" ry="28" fill="#c49220"/>
-  <ellipse cx="170" cy="190" rx="90" ry="32" fill="#e8b84a"/>
-  <circle cx="200" cy="56" r="22" fill="#fff3c0"/>
+  <circle cx="256" cy="256" r="240" fill="url(#atm)"/>
+  <ellipse cx="200" cy="300" rx="120" ry="40" fill="#c47a18"/>
+  <ellipse cx="320" cy="250" rx="90" ry="30" fill="#f0c050"/>
+  <circle cx="160" cy="170" r="36" fill="#fff3c0" opacity=".55"/>
+  <path d="M80 340 Q256 380 430 320" fill="none" stroke="#8a4a10" stroke-width="14" opacity=".4"/>
 </svg>

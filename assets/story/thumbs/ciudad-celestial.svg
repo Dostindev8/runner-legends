@@ -1,7 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Ciudad Celestial">
-  <rect width="256" height="256" rx="28" fill="#1a2860"/>
-  <ellipse cx="70" cy="170" rx="50" ry="18" fill="#a8c8ff"/>
-  <ellipse cx="160" cy="150" rx="70" ry="22" fill="#d0dcff"/>
-  <rect x="150" y="80" width="24" height="70" fill="#c8d8ff"/>
-  <circle cx="200" cy="50" r="14" fill="#fff6c8"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Planeta Ciudad Celestial">
+  <defs>
+    <radialGradient id="atm" cx="34%" cy="26%" r="72%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#8aa8ff"/>
+      <stop offset="100%" stop-color="#101830"/>
+    </radialGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="url(#atm)"/>
+  <ellipse cx="180" cy="320" rx="90" ry="24" fill="#d0dcff"/>
+  <ellipse cx="320" cy="280" rx="110" ry="28" fill="#f0f4ff"/>
+  <rect x="300" y="160" width="28" height="100" rx="6" fill="#c8d8ff"/>
+  <circle cx="140" cy="150" r="22" fill="#fff6c8"/>
 </svg>

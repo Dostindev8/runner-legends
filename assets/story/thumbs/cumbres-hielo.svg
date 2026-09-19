@@ -1,6 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Cumbres de Hielo">
-  <rect width="256" height="256" rx="28" fill="#0a2a4a"/>
-  <polygon points="40,200 90,80 140,200" fill="#9ff0ff"/>
-  <polygon points="110,200 170,60 230,200" fill="#c8f7ff"/>
-  <circle cx="48" cy="48" r="16" fill="#e8f4ff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Planeta Cumbres de Hielo">
+  <defs>
+    <radialGradient id="atm" cx="34%" cy="28%" r="70%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#7ad4ff"/>
+      <stop offset="100%" stop-color="#062038"/>
+    </radialGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="url(#atm)"/>
+  <polygon points="140,360 220,140 300,360" fill="#e8fbff" opacity=".85"/>
+  <polygon points="240,360 340,120 430,360" fill="#b8eeff" opacity=".7"/>
+  <ellipse cx="180" cy="150" rx="60" ry="22" fill="#fff" opacity=".35"/>
 </svg>

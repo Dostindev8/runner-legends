@@ -1,6 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Coliseo">
-  <rect width="256" height="256" rx="28" fill="#2a1410"/>
-  <ellipse cx="128" cy="150" rx="90" ry="50" fill="none" stroke="#ffb060" stroke-width="8"/>
-  <ellipse cx="128" cy="140" rx="70" ry="36" fill="none" stroke="#ffd24a" stroke-width="6"/>
-  <rect x="118" y="70" width="20" height="70" fill="#ffb060"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Planeta Coliseo">
+  <defs>
+    <radialGradient id="atm" cx="36%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#ffe0b0"/>
+      <stop offset="50%" stop-color="#c06030"/>
+      <stop offset="100%" stop-color="#1a0808"/>
+    </radialGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="url(#atm)"/>
+  <ellipse cx="256" cy="280" rx="140" ry="70" fill="none" stroke="#ffd24a" stroke-width="12"/>
+  <ellipse cx="256" cy="268" rx="100" ry="46" fill="none" stroke="#ffb060" stroke-width="8"/>
+  <rect x="246" y="150" width="20" height="110" fill="#ffd24a"/>
 </svg>

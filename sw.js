@@ -1,5 +1,5 @@
 /* Runner Legends PWA — cache-first static, network-first API fallback */
-const CACHE_VERSION = 'rl-v7-cierre-1';
+const CACHE_VERSION = 'rl-v7-story-2';
 const PRECACHE = [
   './',
   './index.html',
