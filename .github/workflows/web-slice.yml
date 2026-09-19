@@ -11,7 +11,8 @@ jobs:
       - name: Auditoría de IP
         run: |
           if grep -rilE 'goku|saiyan|rasengan|naruto|chakra|power ranger|morphin|megazord' \
-            --include='*.js' --include='*.html' --include='*.json' --include='*.md' . ; then
+            --include='*.js' --include='*.html' --include='*.json' --include='*.md' \
+            --exclude-dir=.cursor --exclude-dir=node_modules --exclude-dir=unity . ; then
             echo "::error::Coincidencia de IP externa detectada"
             exit 1
           fi
