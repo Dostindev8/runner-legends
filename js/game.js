@@ -466,6 +466,14 @@
       const vw = Math.max(1, Math.round((vv && vv.width) || window.innerWidth || document.documentElement.clientWidth));
       const vh = Math.max(1, Math.round((vv && vv.height) || window.innerHeight || document.documentElement.clientHeight));
       this.dpr = Math.min(window.devicePixelRatio || 1, quality.dprCap);
+      let cw = Math.round(vw * this.dpr);
+      let ch = Math.round(vh * this.dpr);
+      const fit = Math.min(1, 3840 / cw, 2160 / ch);
+      if (fit < 1) {
+        this.dpr *= fit;
+        cw = Math.round(vw * this.dpr);
+        ch = Math.round(vh * this.dpr);
+      }
       // Zoom the camera on phones so the runner fills the frame (logicalH 540 looked tiny).
       const portrait = vh >= vw;
       if (portrait && vw <= 375) this.h = 380;
@@ -477,8 +485,8 @@
       if (vw < 700) this.novaZoom = 1 + ((700 - vw) / 700) * 0.35;
       this.scale = (vh / this.h) * this.novaZoom;
       this.w = Math.max(280, vw / this.scale);
-      this.c.width = Math.round(vw * this.dpr);
-      this.c.height = Math.round(vh * this.dpr);
+      this.c.width = cw;
+      this.c.height = ch;
       this.ctx.imageSmoothingEnabled = true;
       this.ctx.imageSmoothingQuality = 'high';
     }
@@ -1901,7 +1909,9 @@
 
   // —— Loop ——
   let last = performance.now();
+  let bgPause = false;
   function frame(now) {
+    if (bgPause) { last = now; requestAnimationFrame(frame); return; }
     let raw = (now - last) / 1000; last = now; if (raw > 0.05) raw = 0.05;
     const dt = clock.step(raw);
     update(raw, dt); render();
@@ -2469,6 +2479,20 @@
       };
     }
     evaluateAchievements(null);
+    window.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        bgPause = true;
+        persist();
+        if (audio.ctx && audio.ctx.state === 'running') audio.ctx.suspend();
+      } else {
+        last = performance.now();
+        bgPause = false;
+        if (audio.ctx && audio.ctx.state === 'suspended') audio.ctx.resume();
+      }
+    });
+    window.addEventListener('pagehide', () => { persist(); });
+    window.addEventListener('error', (e) => { try { console.warn('RL error', e && e.message); } catch (err) { /* ignore */ } });
+    window.addEventListener('unhandledrejection', (e) => { try { console.warn('RL reject', e && e.reason); } catch (err) { /* ignore */ } });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

@@ -90,6 +90,7 @@
       });
     }
     L.x = L.srcX; L.vx = -(220 + (world && world.speed ? world.speed * 0.35 : 80));
+    L.delay = 0;
     if (L.kind === 'bolt_high') { L.y = gy - 78; L.h = 12; L.w = 52; }
     else if (L.kind === 'wave') { L.y = gy - 14; L.h = 16; L.w = 90; L.vx *= 0.7; }
     else if (L.kind === 'beam') { L.y = gy - 50; L.h = 18; L.w = view.w * 0.45; L.vx = 0; }
@@ -99,8 +100,10 @@
 
   function spawnVolley(view, world, diffId) {
     spawnLaser('bolt_low', view, world, diffId);
-    setTimeout(function () { spawnLaser('bolt_high', view, world, diffId); }, 280);
-    setTimeout(function () { spawnLaser('bolt_low', view, world, diffId); }, 560);
+    const a = spawnLaser('bolt_high', view, world, diffId);
+    if (a) a.delay = 0.28;
+    const b = spawnLaser('bolt_low', view, world, diffId);
+    if (b) b.delay = 0.56;
   }
 
   function dodged(L, player, view) {
@@ -291,6 +294,7 @@
 
       laserPool.forEach(function (L) {
         if (!L.a) return;
+        if (L.delay > 0) { L.delay -= dt; return; }
         L.t += dt;
         if (L.phase === 'tele') {
           if (L.t >= L.tele) { L.phase = 'live'; L.t = 0; emit('laser:fire', { kind: L.kind }); }

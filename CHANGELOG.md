@@ -1,5 +1,10 @@
 # Changelog
 
+## [V7.0.1 cierre] — 2026-09-18
+
+Pausa al cambiar de pestaña, tope 4K del canvas, test de láser 10k×4, envelope de torneo para Pistola Estelar, auditoría `docs/TRACEABILITY.md`.
+
+
 ## [V7.0 Estelar] — 2026-09-18
 
 HUD premium (retrato, corazones, monedas, KO), láseres enemigos con telegrafía, baile al cerrar tramo, **Pistola Estelar** y **Montura Alada** (skin de vuelo). Overlay `js/v7-estelar.js` sin reescribir el motor.

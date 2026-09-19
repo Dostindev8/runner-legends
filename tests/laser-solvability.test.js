@@ -34,7 +34,7 @@ function solvable(kind, reaction, tele) {
 
 const tele = { normal: 0.7, hard: 0.6, expert: 0.5, legendary: 0.42 };
 const kinds = ['bolt_low', 'bolt_high', 'volley', 'wave', 'beam', 'cross'];
-const N = 2000;
+const N = 10000;
 let failH = 0, failI = 0, n = 0;
 ['normal', 'hard', 'expert', 'legendary'].forEach((d) => {
   const rng = mulberry32(20260918 + d.length);

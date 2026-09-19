@@ -5,6 +5,8 @@ node_modules
 **/node_modules
 .github
 .git
+docs
+tests
 *.md
 !README.md
 Docs

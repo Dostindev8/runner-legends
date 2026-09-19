@@ -36,6 +36,7 @@ export const POWER_ENVELOPES: Record<string, { maxSpeedMult: number; cost: numbe
   TORMENTA_VOLTIOS: { maxSpeedMult: 1.0, cost: 65 },
   FASE_ESPECTRAL: { maxSpeedMult: 1.0, cost: 45 },
   EXPLOSION_ESTELAR: { maxSpeedMult: 1.0, cost: 100 },
+  PISTOLA_ESTELAR: { maxSpeedMult: 1.0, cost: 55 },
 };
 
 export const COMBAT = {
