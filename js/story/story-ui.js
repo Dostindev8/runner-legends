@@ -101,7 +101,8 @@
 
   function seedStars(w, h) {
     cosmosStars = [];
-    var n = Math.min(140, Math.floor((w * h) / 9000));
+    var low = RLStory.collision && RLStory.collision.isLowEnd && RLStory.collision.isLowEnd();
+    var n = Math.min(low ? 48 : 140, Math.floor((w * h) / (low ? 18000 : 9000)));
     var i;
     for (i = 0; i < n; i++) {
       cosmosStars.push({
@@ -161,7 +162,8 @@
     if (!canvas) return;
     function size() {
       var r = canvas.parentElement ? canvas.parentElement.getBoundingClientRect() : { width: 375, height: 700 };
-      var dpr = Math.min(2, window.devicePixelRatio || 1);
+      var low = RLStory.collision && RLStory.collision.isLowEnd && RLStory.collision.isLowEnd();
+      var dpr = low ? 1 : Math.min(2, window.devicePixelRatio || 1);
       canvas.width = Math.max(320, Math.floor(r.width * dpr));
       canvas.height = Math.max(480, Math.floor(r.height * dpr));
       seedStars(canvas.width, canvas.height);
@@ -171,8 +173,11 @@
       drawCosmos(canvas, 0);
       return;
     }
+    var lastC = 0;
     function loop(now) {
       if (!openFlag) return;
+      if (lastC && RLStory.collision && RLStory.collision.noteFrame) RLStory.collision.noteFrame(now - lastC);
+      lastC = now;
       drawCosmos(canvas, now);
       cosmosRaf = requestAnimationFrame(loop);
     }
@@ -253,6 +258,8 @@
     var stars = RLStory.state.getStars(level.id, progress);
     var thumb = q(root, 'thumb');
     if (thumb) {
+      thumb.loading = 'lazy';
+      thumb.decoding = 'async';
       thumb.src = world.thumbnail;
       thumb.alt = 'Miniatura de ' + world.name;
     }
@@ -330,6 +337,7 @@
       }
       btn.addEventListener('click', function () {
         selected = { galaxy: galaxy, world: n.world, level: n.level };
+        if (RLStory.audio) RLStory.audio.ui('select');
         RLStory.ui.refresh();
       });
       li.appendChild(btn);
@@ -397,6 +405,7 @@
     var status = RLStory.state.nodeStatus(selected.galaxy, selected.world, selected.level);
     if (status === 'locked') return;
     silenceSpectator();
+    if (RLStory.audio) RLStory.audio.ui('play');
     var engineId = selected.world.engineWorldId;
     RLStory.ui.close();
     var tile = document.querySelector('[data-world="' + engineId + '"]:not([disabled])');
@@ -517,6 +526,8 @@
       var root = $('rl-story-root');
       if (!root) return;
       silenceSpectator();
+      if (RLStory.audio) { RLStory.audio.warm(); RLStory.audio.ui('open'); }
+      if (RLStory.collision) RLStory.collision.install();
       if (!q(root, 'cosmos')) buildShell(root);
       bindOnce();
       openFlag = true;

@@ -436,3 +436,33 @@ body.rl-story-open #skipBtn {
   .rl-story-orbit,
   #rl-story-root { transition: none !important; animation: none !important; }
 }
+
+/* Safe-area aditiva: controles nunca cubren el suelo de juego */
+#superBtn {
+  bottom: max(16px, calc(14px + env(safe-area-inset-bottom, 0px)));
+  right: max(12px, calc(12px + env(safe-area-inset-right, 0px)));
+}
+#hud {
+  padding-top: max(8px, calc(6px + env(safe-area-inset-top, 0px)));
+}
+#celeLayer {
+  pointer-events: none;
+}
+#celeSkip {
+  pointer-events: auto;
+  min-width: 48px;
+  min-height: 48px;
+}
+
+@media (max-width: 400px) {
+  .rl-story-cosmos canvas { image-rendering: auto; }
+  .rl-story-detail { backdrop-filter: none; }
+}
+
+@media (min-width: 768px) {
+  #superBtn { width: 64px; height: 64px; }
+}
+@media (min-width: 1280px) {
+  .rl-story-shell { max-width: 960px; }
+}
+
