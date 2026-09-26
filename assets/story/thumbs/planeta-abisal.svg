@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Planeta Abisal">
+  <defs>
+    <radialGradient id="atm" cx="38%" cy="32%" r="70%">
+      <stop offset="0%" stop-color="#9ffff0"/>
+      <stop offset="45%" stop-color="#0a6a68"/>
+      <stop offset="100%" stop-color="#020818"/>
+    </radialGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="url(#atm)"/>
+  <circle cx="200" cy="210" r="22" fill="#2ee8c0" opacity=".7"/>
+  <circle cx="320" cy="300" r="14" fill="#7af0ff"/>
+  <circle cx="280" cy="180" r="10" fill="#fff" opacity=".5"/>
+  <ellipse cx="256" cy="340" rx="120" ry="24" fill="#041828" opacity=".45"/>
+</svg>

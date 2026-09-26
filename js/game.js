@@ -171,6 +171,10 @@
   persist(); // rewrite save after contiguous-unlock sanitize
 
   function trailColor() {
+    if (window.RLSkins && window.RLSkins.getSkin) {
+      const sk = window.RLSkins.getSkin(save.trail);
+      if (sk && sk.col) return sk.col;
+    }
     const t = TRAILS.find((x) => x.id === save.trail);
     return (t && t.col) || '#22e6ff';
   }
@@ -504,10 +508,14 @@
 
   class CameraShake {
     constructor() { this.trauma = 0; this.t = 0; }
-    add(a) { this.trauma = clamp(this.trauma + a * (runMods.shakeMul || 1), 0, 1); }
+    add(a) {
+      const damp = (window.RL25D && window.RL25D.shakeScale) ? window.RL25D.shakeScale() : 1;
+      this.trauma = clamp(this.trauma + a * (runMods.shakeMul || 1) * damp, 0, 1);
+    }
     update(dt) { this.t += dt * 30; this.trauma = Math.max(0, this.trauma - dt * 1.6); }
     get offset() {
-      const s = this.trauma * this.trauma * 12;
+      const motion = (window.RL25D && window.RL25D.shakeScale) ? window.RL25D.shakeScale() : 1;
+      const s = this.trauma * this.trauma * 12 * motion;
       return { x: Math.sin(this.t * 1.7) * s, y: Math.cos(this.t * 2.3) * s };
     }
   }
@@ -748,6 +756,9 @@
         this.onGround = false; this.state = PS.AIR; this.sx = 0.78; this.sy = 1.28;
         particles.dust(this.x, canAir ? this.y + this.h : gY); bus.emit('jump');
         if (canAir) particles.burst(this.x, this.y + this.h * 0.5, 10, { col: trailColor(), spMax: 160, lifeMax: 0.35, g: 200 });
+        try {
+          if (navigator.vibrate && localStorage.getItem('rl_v7_haptic') !== '0') navigator.vibrate(canAir ? 12 : 8);
+        } catch (e) { /* ignore */ }
       }
       if (input.consumeRelease() && this.vy < 0) this.vy *= CFG.jumpCut;
       let g = CFG.gravity * runtime.gravityMul;
@@ -1368,6 +1379,7 @@
     $('ruleChip').textContent = runtime.rule.icon + ' ' + runtime.rule.label;
     $('worldChip').textContent = runtime.world.name.toUpperCase();
     $('weatherChip').textContent = runtime.weather.label;
+    if (window.RL25D && window.RL25D.onWorldChange) window.RL25D.onWorldChange(view, runtime);
   }
 
   function applyBiome(outcome) {
@@ -1384,6 +1396,7 @@
     $('worldChip').textContent = runtime.world.name.toUpperCase();
     $('weatherChip').textContent = runtime.weather.label;
     iris.beginFlash(runtime.world.palette.accent);
+    if (window.RL25D && window.RL25D.onWorldChange) window.RL25D.onWorldChange(view, runtime);
   }
 
   function enterPortal(originId) {
@@ -1556,6 +1569,19 @@
     persist();
     evaluateAchievements({ dist: d, combo: mc, kills: kills, cleared: cleared });
     refreshMenuUI();
+    if (window.RL25D && window.RL25D.onResults) {
+      window.RL25D.onResults({
+        name: save.name,
+        dist: d,
+        combo: mc,
+        kills: kills,
+        diff: activeDiff.label,
+        worldId: runtime.worldId,
+        worldName: runtime.world.name,
+        cleared: cleared,
+        canvas: view && view.c
+      });
+    }
   }
 
   function syncHUD() {
@@ -2005,6 +2031,11 @@
       ctx.fillStyle = vg;
       ctx.fillRect(-20, -20, view.w + 40, view.h + 40);
     }
+    if (window.RL25D && window.RL25D.afterFrame) {
+      window.RL25D.afterFrame(ctx, view, {
+        mgr, player, world, runtime, shake, economy, quality
+      });
+    }
   }
 
   const introScenes = [
@@ -2178,42 +2209,67 @@
         }).join('') + '</div>';
     } else if (which === 'shop') {
       title.textContent = 'Tienda';
-      body.innerHTML = `<div class="info-card"><h3>Estelas de Kori</h3>
-        <p class="meta">Saldo: ${save.coins} monedas · Activa: ${esc((TRAILS.find((t) => t.id === save.trail) || TRAILS[0]).name)}</p>` +
-        TRAILS.map((t) => {
-          const owned = save.ownedTrails.includes(t.id);
+      const catalog = (window.RLSkins && window.RLSkins.SKINS) ? window.RLSkins.SKINS : TRAILS.map((t) => ({
+        id: t.id, name: t.name, col: t.col, rarity: 'common', unlock: t.price ? 'coins' : 'owned', price: t.price || 0, preview: ''
+      }));
+      const pay = window.RLSkins && window.RLSkins.createPayment ? window.RLSkins.createPayment() : null;
+      const activeName = (catalog.find((t) => t.id === save.trail) || catalog[0]).name;
+      body.innerHTML = `<div class="info-card"><h3>Skins · cosmético puro</h3>
+        <p class="meta">Saldo: ${save.coins} · Activa: ${esc(activeName)} · Cero ventaja de gameplay</p>` +
+        catalog.map((t) => {
+          const owned = save.ownedTrails.includes(t.id) || t.unlock === 'owned';
+          const missionOk = t.unlock !== 'mission' || !!(save.achievements && save.achievements[t.mission]);
+          const canOwn = owned || (t.unlock === 'coins') || (t.unlock === 'mission' && missionOk);
           const on = save.trail === t.id;
-          const action = on ? 'Equipada' : owned ? 'Equipar' : `Comprar · ${t.price}`;
+          let action = on ? 'Equipada' : owned ? 'Equipar' : (t.unlock === 'premium' ? 'Premium' : (t.unlock === 'mission' ? (missionOk ? 'Reclamar' : 'Misión') : `Comprar · ${t.price || 0}`));
+          const dis = on || (t.unlock === 'mission' && !missionOk && !owned) || (t.unlock === 'premium' && !owned);
           return `<div class="shop-row">
             <div style="display:flex;align-items:center;gap:10px">
               <span class="shop-swatch" style="color:${esc(t.col)};background:${esc(t.col)}"></span>
-              <div><b>${esc(t.name)}</b><p class="meta">${owned ? 'En inventario' : t.price + ' monedas'}</p></div>
+              <div><b>${esc(t.name)}</b><span class="shop-rarity ${esc(t.rarity || 'common')}">${esc(t.rarity || 'common')}</span>
+              <p class="meta">${esc(t.preview || (owned ? 'En inventario' : ''))}</p></div>
             </div>
-            <button type="button" class="btn ghost" data-trail="${esc(t.id)}" ${on ? 'disabled' : ''}>${action}</button>
+            <button type="button" class="btn ghost" data-skin="${esc(t.id)}" ${dis ? 'disabled' : ''}>${action}</button>
           </div>`;
         }).join('') + '</div>';
       setTimeout(() => {
-        body.querySelectorAll('[data-trail]').forEach((btn) => {
+        body.querySelectorAll('[data-skin]').forEach((btn) => {
           btn.addEventListener('click', () => {
-            const id = btn.dataset.trail;
-            const item = TRAILS.find((t) => t.id === id);
+            const id = btn.dataset.skin;
+            const item = catalog.find((t) => t.id === id);
             if (!item) return;
             if (!save.ownedTrails.includes(id)) {
-              if (save.coins < item.price) { flashToast('Monedas insuficientes'); return; }
-              save.coins -= item.price;
-              save.ownedTrails.push(id);
+              if (item.unlock === 'premium') {
+                if (pay && pay.purchase) {
+                  pay.purchase(item.id).then((r) => flashToast((r && r.message) || 'Pasarela pendiente'));
+                } else flashToast('Pasarela pendiente');
+                return;
+              }
+              if (item.unlock === 'mission') {
+                if (!(save.achievements && save.achievements[item.mission])) { flashToast('Completa la misión'); return; }
+                save.ownedTrails.push(id);
+              } else if (item.unlock === 'coins') {
+                if (save.coins < (item.price || 0)) { flashToast('Monedas insuficientes'); return; }
+                save.coins -= item.price || 0;
+                save.ownedTrails.push(id);
+              } else {
+                save.ownedTrails.push(id);
+              }
             }
             save.trail = id;
             persist(); refreshMenuUI(); openPanel('shop');
-            flashToast('Estela · ' + item.name);
+            flashToast('Skin · ' + item.name);
           });
         });
       }, 0);
     } else if (which === 'tournament') {
-      title.textContent = 'Torneo';
-      body.innerHTML = `<div class="info-card empty"><h3>Ranking de temporada</h3>
-        <p>Modo determinista del portal listo para retos semanales.</p>
-        <p class="meta">Conecta tournament-service cuando el backend esté online. Cero rankings falsos.</p></div>`;
+      title.textContent = 'Ranking';
+      const rows = (window.RLLeaderboard && window.RLLeaderboard.top) ? window.RLLeaderboard.top(10) : [];
+      body.innerHTML = `<div class="info-card"><h3>Top local · distancia</h3>
+        <p class="meta">Validado · sin HTML crudo · sync best-effort con /api/leaderboard</p>` +
+        (rows.length ? rows.map((r, i) => `<div class="lb-row"><b>#${i + 1} ${esc(r.name)}</b><span>${Math.floor(r.dist)} m · ×${Math.floor(r.combo || 0)}</span></div>`).join('')
+          : '<p class="meta">Aún no hay marcas. Termina una carrera para entrar.</p>') +
+        '</div>';
     } else if (which === 'settings') {
       title.textContent = 'Ajustes';
       const a = save.audio || { music: 0.55, sfx: 0.7, voice: 0.65 };
@@ -2255,18 +2311,26 @@
           try { qSel.value = localStorage.getItem('rl_v7_quality') || 'ALTA'; } catch (e) { qSel.value = 'ALTA'; }
           qSel.addEventListener('change', () => {
             window.RLEstelar.setQuality(qSel.value, quality);
+            if (window.RL25D && window.RL25D.setQuality) window.RL25D.setQuality(quality);
             view.resize();
           });
         }
         const rm = $('v7Reduced');
         if (rm && window.RLEstelar) {
           rm.checked = !!window.RLEstelar.reduced();
-          rm.addEventListener('change', () => window.RLEstelar.setReduced(rm.checked));
+          rm.addEventListener('change', () => {
+            window.RLEstelar.setReduced(rm.checked);
+            try { localStorage.setItem('rl_v7_reduced', rm.checked ? '1' : '0'); } catch (e) { /* ignore */ }
+            if (window.RL25D && window.RL25D.syncReduced) window.RL25D.syncReduced();
+          });
         }
         const hp = $('v7Haptic');
         if (hp && window.RLEstelar) {
           hp.checked = true;
-          hp.addEventListener('change', () => window.RLEstelar.setHaptic(hp.checked));
+          hp.addEventListener('change', () => {
+            window.RLEstelar.setHaptic(hp.checked);
+            try { localStorage.setItem('rl_v7_haptic', hp.checked ? '1' : '0'); } catch (e) { /* ignore */ }
+          });
         }
       }, 0);
     } else if (which === 'roster') {
@@ -2479,6 +2543,12 @@
       };
     }
     evaluateAchievements(null);
+    if (window.RL25D && window.RL25D.bind) {
+      window.RL25D.bind({ quality: quality });
+      window.RL25D.setQuality(quality);
+      window.RL25D.syncReduced();
+      if (view && runtime) window.RL25D.onWorldChange(view, runtime);
+    }
     window.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         bgPause = true;

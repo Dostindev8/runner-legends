@@ -349,6 +349,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
         <button type="button" class="nav-tab" data-nav="shop">Tienda</button>
         <button type="button" class="nav-tab" data-nav="achievements">Logros</button>
         <button type="button" class="nav-tab" data-nav="settings">Ajustes</button>
+        <button id="rl-nav-historia" class="nav-tab nav-item" type="button" aria-label="Modo Historia">
+          <span class="nav-icon" aria-hidden="true">📖</span>
+          <span class="nav-label">Historia</span>
+        </button>
       </nav>
       <div class="profile-chip">
         <div class="avatar" aria-hidden="true"></div>
@@ -482,6 +486,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
         <button class="btn play" id="againBtn" type="button">OTRA VEZ</button>
       </div>
       <div class="nav-row">
+        <button class="btn ghost" id="shareBtn" type="button">Compartir tarjeta</button>
         <button class="btn ghost" id="menuBtn" type="button">Menú</button>
       </div>
     </div>
@@ -500,6 +505,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
   <button class="skip hidden" id="skipBtn" type="button">Saltar ›</button>
 </div>
 
+<div id="rl-story-root" class="rl-story-hidden" aria-hidden="true"></div>
+
+<link rel="stylesheet" href="css/rl25d.css?v=1" />
 <script src="js/worlds.js"></script>
 <script src="js/portal.js"></script>
 <script src="js/content-v6.js"></script>
@@ -512,7 +520,19 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 <script src="js/nova-protocol.js"></script>
 <script src="js/power-fx.js"></script>
 <script src="js/v7-estelar.js"></script>
+<script src="js/data/skins.js?v=1"></script>
+<script src="js/systems/leaderboard-client.js?v=1"></script>
+<script src="js/ui/onboarding.js?v=1"></script>
+<script src="js/ui/share-card.js?v=1"></script>
+<script src="js/render/rl25d-core.js?v=1"></script>
 <script src="js/game.js"></script>
+<link rel="stylesheet" href="css/story-mode.css?v=3">
+<script src="js/story/story-data.js?v=3"></script>
+<script src="js/story/characters-data.js?v=3"></script>
+<script src="js/story/story-state.js?v=3"></script>
+<script src="js/story/story-collision.js?v=3"></script>
+<script src="js/story/story-audio.js?v=3"></script>
+<script src="js/story/story-ui.js?v=3"></script>
 <script>
 (function () {
   'use strict';

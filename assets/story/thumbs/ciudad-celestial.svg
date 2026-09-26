@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Planeta Ciudad Celestial">
+  <defs>
+    <radialGradient id="atm" cx="34%" cy="26%" r="72%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#8aa8ff"/>
+      <stop offset="100%" stop-color="#101830"/>
+    </radialGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="url(#atm)"/>
+  <ellipse cx="180" cy="320" rx="90" ry="24" fill="#d0dcff"/>
+  <ellipse cx="320" cy="280" rx="110" ry="28" fill="#f0f4ff"/>
+  <rect x="300" y="160" width="28" height="100" rx="6" fill="#c8d8ff"/>
+  <circle cx="140" cy="150" r="22" fill="#fff6c8"/>
+</svg>
