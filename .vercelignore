@@ -1,6 +1,7 @@
 server
 tournament-service
 unity
+legacy-2d
 node_modules
 **/node_modules
 .github
@@ -12,3 +13,4 @@ tests
 Docs
 .env
 .env.*
+web3d/node_modules

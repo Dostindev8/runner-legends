@@ -4,6 +4,7 @@ import {
   disposeBoundsTree,
   acceleratedRaycast,
 } from 'three-mesh-bvh';
+import { createKoriMesh, animateKoriRun } from '../entities/Kori';
 import { DIFF, PHYSICS, type DiffId } from '../config';
 import type { InputSystem } from './InputSystem';
 import type { RuntimeMods } from './WorldRulesSystem';
@@ -17,14 +18,12 @@ type GeoProto = THREE.BufferGeometry & {
 (THREE.BufferGeometry.prototype as GeoProto).disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
-/** Jump speeds in Three.js Y+ space (converted from 2D canvas Y-down CFG). */
 const JUMP_UP = Math.abs(PHYSICS.jumpVel) * PHYSICS.scale;
 const DJUMP_UP = Math.abs(PHYSICS.doubleJumpVel) * PHYSICS.scale;
 
 export class CharacterController {
   readonly mesh: THREE.Group;
   readonly position = new THREE.Vector3(0, 1, 0);
-  /** Vertical velocity in Three.js (+Y up). */
   vy = 0;
   onGround = true;
   coyoteT = 0;
@@ -38,10 +37,11 @@ export class CharacterController {
   private readonly raycaster = new THREE.Raycaster();
   private readonly down = new THREE.Vector3(0, -1, 0);
   private readonly origin = new THREE.Vector3();
+  private runPhase = 0;
 
   constructor(runtime: RuntimeMods) {
     this.runtime = runtime;
-    this.mesh = buildKoriProxy();
+    this.mesh = createKoriMesh();
     this.mesh.position.copy(this.position);
   }
 
@@ -62,6 +62,7 @@ export class CharacterController {
     this.bufferT = 0;
     this.jumpsUsed = 0;
     this.distance = 0;
+    this.runPhase = 0;
     this.runSpeed = PHYSICS.runStart * PHYSICS.scale * this.runtime.speedMul;
     this.mesh.position.copy(this.position);
   }
@@ -110,7 +111,6 @@ export class CharacterController {
     }
     this.bufferT = Math.max(0, this.bufferT - dt);
 
-    // Variable jump height (release cuts upward velocity)
     if (input.consumeRelease() && this.vy > 0) this.vy *= PHYSICS.jumpCut;
 
     let grav = g;
@@ -126,7 +126,10 @@ export class CharacterController {
     }
 
     this.mesh.position.copy(this.position);
-    this.mesh.rotation.y = Math.sin(this.distance * 6) * 0.04;
+    if (this.onGround) {
+      this.runPhase += dt * 10 * (this.runSpeed / (PHYSICS.runStart * PHYSICS.scale));
+      animateKoriRun(this.mesh, this.runPhase);
+    }
   }
 
   private probeGround(): number {
@@ -150,28 +153,4 @@ export class CharacterController {
       }
     });
   }
-}
-
-function buildKoriProxy(): THREE.Group {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.28, 0.55, 4, 8),
-    new THREE.MeshToonMaterial({ color: 0x22e6ff }),
-  );
-  body.castShadow = true;
-  body.position.y = 0.55;
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 12, 10),
-    new THREE.MeshToonMaterial({ color: 0xffe0b0 }),
-  );
-  head.position.y = 1.15;
-  head.castShadow = true;
-  const trail = new THREE.Mesh(
-    new THREE.BoxGeometry(0.12, 0.12, 0.55),
-    new THREE.MeshToonMaterial({ color: 0xff2bd6, emissive: 0xff2bd6, emissiveIntensity: 0.45 }),
-  );
-  trail.position.set(0, 0.5, -0.4);
-  g.add(body, head, trail);
-  g.name = 'KoriVoltz';
-  return g;
 }

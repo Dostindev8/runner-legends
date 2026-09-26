@@ -89,6 +89,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; }
 .menu h1 { margin: 0 0 6px; font-size: clamp(1.3rem, 5vw, 1.8rem); letter-spacing: 0.06em; }
 .menu h1 span { color: var(--cyan); }
 .credit { color: var(--muted); font-size: 0.72rem; margin: 0 0 14px; }
+.credit-foot { color: var(--muted); font-size: 0.68rem; margin: 10px 0 0; opacity: 0.9; }
 .diff-row, .quality-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
 .diff, .q {
   min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid #456;
@@ -101,7 +102,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; }
   background: linear-gradient(180deg, #ffe56a, var(--gold)); color: #111; font-weight: 800; font-size: 1.05rem; cursor: pointer;
 }
 .hint { color: var(--muted); font-size: 0.7rem; margin-top: 10px; }
-.back-2d { display: inline-block; margin-top: 12px; color: var(--cyan); font-size: 0.8rem; }
 
 .power-list { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
 .power-item {
@@ -111,9 +111,26 @@ html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; }
 .power-close { min-height: 44px; width: 100%; border-radius: 10px; border: 1px solid #666; background: transparent; color: var(--muted); cursor: pointer; }
 .results ul { list-style: none; padding: 0; margin: 12px 0; color: var(--muted); font-size: 0.9rem; }
 
+@media (max-width: 400px) {
+  .hud { font-size: 0.68rem; top: calc(6px + var(--safe-t)); }
+  .super-wrap { bottom: calc(100px + var(--safe-b)); width: min(260px, 78vw); }
+  .touch-btn { min-width: 52px; min-height: 52px; }
+  .menu, .results, .power-menu { width: min(100vw - 16px, 420px); padding: 14px; }
+  .menu h1 { font-size: 1.15rem; }
+}
+
+@media (min-width: 414px) and (max-width: 767px) {
+  .touch-btn { min-width: 60px; min-height: 60px; }
+}
+
 @media (min-width: 768px) {
   .touch { display: none; }
   .super-wrap { bottom: calc(24px + var(--safe-b)); }
+}
+
+@media (min-width: 1280px) {
+  .hud { font-size: 1rem; padding: 0 24px; }
+  .menu { width: 440px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

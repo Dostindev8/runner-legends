@@ -1,0 +1,11 @@
+{
+  "name": "runner-legends",
+  "private": true,
+  "version": "4.0.0",
+  "description": "Runner Legends — Three.js r186 (Logic Code Spot · RD)",
+  "scripts": {
+    "dev": "npm run dev --prefix web3d",
+    "build": "npm run build --prefix web3d",
+    "preview": "npm run preview --prefix web3d"
+  }
+}

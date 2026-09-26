@@ -15,6 +15,7 @@ import { FollowCamera } from './systems/FollowCamera';
 import { PowerSystem } from './systems/PowerSystem';
 import { PortalSystem, WORLDS } from './systems/PortalSystem';
 import { WorldRulesSystem, buildRuntime } from './systems/WorldRulesSystem';
+import { ObstacleSystem } from './systems/ObstacleSystem';
 import { AudioSystem } from './systems/AudioSystem';
 import { DomBridge } from './ui/DomBridge';
 import type { WorldId } from './worlds/registry';
@@ -24,6 +25,7 @@ export class Game {
   private readonly input = new InputSystem();
   private readonly audio = new AudioSystem();
   private readonly portal = new PortalSystem();
+  private readonly obstacles = new ObstacleSystem();
   private qualityId: QualityId = detectQuality();
   private diffId: DiffId = 'normal';
   private renderer!: RendererHost;
@@ -49,7 +51,6 @@ export class Game {
 
     this.renderer = new RendererHost(canvas);
     this.ui.setBoot(20);
-    // WebGPU optional — never block boot
     void this.renderer.tryWebGPU();
     this.renderer.applyQuality(QUALITY[this.qualityId]);
 
@@ -60,6 +61,7 @@ export class Game {
     this.rules = new WorldRulesSystem(rt);
     this.player = new CharacterController(rt);
     this.player.setDifficulty(this.diffId);
+    this.obstacles.setDifficulty(this.diffId);
     this.cam = new FollowCamera(this.scenes.camera);
 
     this.powers = new PowerSystem(
@@ -81,6 +83,7 @@ export class Game {
     const w = this.scenes.world;
     if (w) {
       this.scenes.scene.add(this.player.mesh);
+      this.scenes.scene.add(this.obstacles.root);
       this.player.setGroundMesh(w.ground);
     }
     this.ui.setBoot(100);
@@ -90,7 +93,7 @@ export class Game {
     this.resize();
     window.addEventListener('resize', this.resize);
     this.loop.start();
-    this.loop.pause(); // wait for play
+    this.loop.pause();
   }
 
   private bindUi(): void {
@@ -99,7 +102,11 @@ export class Game {
       this.input.bindTouch(touchLeft, touchJump, touchRight, superBtn ?? undefined);
     }
     this.ui.bindDiffQuality(
-      (d) => { this.diffId = d; this.player.setDifficulty(d); },
+      (d) => {
+        this.diffId = d;
+        this.player.setDifficulty(d);
+        this.obstacles.setDifficulty(d);
+      },
       (q) => {
         this.qualityId = q;
         this.renderer.applyQuality(QUALITY[q]);
@@ -123,6 +130,7 @@ export class Game {
     this.ko = 0;
     this.iframes = 0;
     this.player.reset();
+    this.obstacles.reset(this.player.position.z + 14);
     this.portalUsed = false;
     this.ui.showMenu(false);
     this.ui.hideResults();
@@ -144,18 +152,36 @@ export class Game {
 
     this.player.update(dt, this.input);
     this.scenes.update(dt, this.player.position.z);
+    this.obstacles.update(dt, this.player.position.z, DIFF[this.diffId].scroll);
     this.cam.update(dt, this.player.position);
 
-    // Passive coin drip for SÚPER feel (placeholder until coin entities)
-    if (Math.random() < 0.02 * DIFF[this.diffId].density) {
-      this.coins += 1;
-      this.powers.addCharge(0.012);
+    const col = this.obstacles.collidePlayer(
+      this.player.position.x,
+      this.player.position.y,
+      this.player.position.z,
+      this.player.vy,
+    );
+    if (col.coins > 0) {
+      this.coins += col.coins;
+      this.powers.addCharge(col.coins * 0.012);
       this.audio.coin();
     }
+    if (col.kos > 0) {
+      this.ko += col.kos;
+      this.player.vy = Math.abs(PHYSICS.jumpVel) * PHYSICS.scale * 0.55;
+      this.cam.bump(0.12);
+      this.audio.uiBeep(640, 0.05);
+    }
+    if (col.hits > 0 && this.iframes <= 0) {
+      this.hp -= 1;
+      this.iframes = PHYSICS.iframes;
+      this.cam.bump(0.22);
+      this.audio.hurt();
+    }
+
     this.powers.tick(dt, 0);
     this.iframes = Math.max(0, this.iframes - dt);
 
-    // Portal at distance (once per run segment)
     if (!this.portalUsed && this.player.distance >= PHYSICS.portalAt) {
       this.portalUsed = true;
       const next = this.portal.resolve({
@@ -166,9 +192,7 @@ export class Game {
       void this.transitionWorld(next.worldId as WorldId, next);
     }
 
-    // Stage clear
-    const cleared =
-      this.ko >= PHYSICS.stageKills || this.player.distance >= PHYSICS.stageDist;
+    const cleared = this.ko >= PHYSICS.stageKills || this.player.distance >= PHYSICS.stageDist;
     if (cleared || this.hp <= 0) {
       this.endRun(cleared && this.hp > 0);
     }
@@ -192,12 +216,15 @@ export class Game {
     this.worldId = id;
     if (!this.unlocked.includes(id)) this.unlocked.push(id);
     this.scenes.scene.remove(this.player.mesh);
+    this.scenes.scene.remove(this.obstacles.root);
     await this.scenes.loadWorld(id);
     const w = this.scenes.world;
     if (w) {
       this.scenes.scene.add(this.player.mesh);
+      this.scenes.scene.add(this.obstacles.root);
       this.player.setGroundMesh(w.ground);
     }
+    this.obstacles.reset(this.player.position.z + 10);
     this.audio.startAmbient(WORLDS.find((x) => x.id === id)?.difficulty === 1 ? 220 : 160);
   }
 
@@ -210,7 +237,7 @@ export class Game {
       `Monedas ${this.coins} · ×${DIFF[this.diffId].reward.toFixed(2)}`,
       `KO ${this.ko}/${PHYSICS.stageKills}`,
       `Mundo ${this.scenes.world?.name ?? this.worldId}`,
-      'Logic Code Spot · Dostin Santana',
+      'Logic Code Spot · Dostin Santana · República Dominicana',
     ]);
   }
 
@@ -246,6 +273,7 @@ export class Game {
     this.loop.dispose();
     this.input.dispose();
     this.audio.dispose();
+    this.obstacles.dispose();
     this.player.dispose();
     this.scenes.dispose();
     this.renderer.dispose();

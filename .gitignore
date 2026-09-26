@@ -48,6 +48,9 @@ unity/RunnerLegends/obj/
 .vercel/
 .vercel
 
+# Production build (Three.js)
+dist/
+
 # web3d tooling
 web3d/dist/
 

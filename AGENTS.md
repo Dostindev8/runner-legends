@@ -1,8 +1,9 @@
 # Runner Legends — instrucciones de agente
 
-Leer primero `.cursor/skills/god-stack-ing/DIGEST.md`. No cargar el SKILL.md completo salvo auditoría ISO.
+Producto principal: **Three.js r186** en `web3d/` → build `dist/`.
 
-- Vanilla HTML/Canvas. Extender módulos, no reescribir el motor.
-- IP original LCS. Sin IPs de terceros.
-- Verificar con `node --check js/*.js` (PowerShell: `;` no `&&`).
+- El slice Canvas 2D está retirado de producción y archivado en `legacy-2d/` (pedido 2026-09-26).
+- Preferir `.cursor/skills/god-stack-ing/DIGEST.md` (corto).
+- Verificar: `cd web3d; npm run build` (`tsc` + Vite).
 - Commit / push / `vercel --prod` solo si el usuario lo pide.
+- IP original LCS · Kori Voltz · sin IPs de terceros.

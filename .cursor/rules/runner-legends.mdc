@@ -1,16 +1,15 @@
 ---
-description: Runner Legends canon — vanilla Canvas, IP LCS, ship rules
+description: Runner Legends canon — Three.js r186 primary, IP LCS, ship rules
 alwaysApply: true
 ---
 
 # Runner Legends
 
-Stack: `index.html` + `js/*.js` IIFE + Canvas 2D. **EXTEND-NEVER-OVERWRITE** — no migrar a React/Next/TS.
+Stack primario: `web3d/` (Vite + TypeScript + Three.js r186) → `dist/`.  
+Legacy Canvas 2D archivado en `legacy-2d/` (no servir en prod).
 
-IP: Logic Code Spot. Protagonista Kori Voltz. Cero Naruto / Goku / DBZ / Power Rangers.
+IP: Logic Code Spot · RD. Protagonista Kori Voltz. Cero Naruto / Goku / DBZ / Power Rangers.
 
-Combate: `js/combat-v8.js` + `js/enemies-v8.js`. Hitbox = sprite (`o.y`). Pisotón baja HP. Tramo cierra con 8 KO / 250 m / jefe.
+Gameplay: coyote por DIFF · 8 KO / 250 m / jefe · portal variable · SÚPER menú.
 
-Agente: preferir `.cursor/skills/god-stack-ing/DIGEST.md` (corto). El SKILL.md largo solo si hace falta norma/ISO.
-
-Git: commit/push/Vercel solo con pedido explícito del usuario en el turno (salvo “sube a github y vercel”).
+Agente: preferir DIGEST god-stack-ing. Commit/push/Vercel solo con pedido explícito.
