@@ -43,57 +43,79 @@ export class Game {
   private unlocked = ['neon'];
   private worldId: WorldId = 'neon';
   private portalUsed = false;
+  private idleT = 0;
 
   async boot(): Promise<void> {
-    this.ui.setBoot(5);
-    const canvas = this.ui.els.canvas;
-    if (!canvas) throw new Error('Missing #rl3d-canvas');
+    try {
+      this.ui.setBoot(8);
+      const canvas = this.ui.els.canvas;
+      if (!canvas) throw new Error('Missing #rl3d-canvas');
 
-    this.renderer = new RendererHost(canvas);
-    this.ui.setBoot(20);
-    void this.renderer.tryWebGPU();
-    this.renderer.applyQuality(QUALITY[this.qualityId]);
+      // Show root early so canvas has real CSS size before WebGL init
+      this.ui.hideBootPartial();
+      this.resize();
 
-    this.scenes = new SceneManager(QUALITY[this.qualityId]);
-    this.ui.setBoot(40);
+      this.renderer = new RendererHost(canvas);
+      this.ui.setBoot(25);
+      this.renderer.applyQuality(QUALITY[this.qualityId]);
+      this.resize();
 
-    const rt = buildRuntime('neon', 'clear_night', 'extreme_speed', 1.08, 1);
-    this.rules = new WorldRulesSystem(rt);
-    this.player = new CharacterController(rt);
-    this.player.setDifficulty(this.diffId);
-    this.obstacles.setDifficulty(this.diffId);
-    this.cam = new FollowCamera(this.scenes.camera);
+      this.scenes = new SceneManager(QUALITY[this.qualityId]);
+      this.ui.setBoot(45);
 
-    this.powers = new PowerSystem(
-      (paused) => {
-        if (paused) this.loop.pause();
-        else this.loop.resume();
-      },
-      () => {
-        this.ui.closePowerMenu();
-        this.audio.uiBeep(700, 0.08);
-      },
-    );
+      const rt = buildRuntime('neon', 'clear_night', 'extreme_speed', 1.08, 1);
+      this.rules = new WorldRulesSystem(rt);
+      this.player = new CharacterController(rt);
+      this.player.setDifficulty(this.diffId);
+      this.obstacles.setDifficulty(this.diffId);
+      this.cam = new FollowCamera(this.scenes.camera);
 
-    this.loop = new Loop((dt) => this.tick(dt));
-    this.bindUi();
-    this.ui.setBoot(70);
+      this.powers = new PowerSystem(
+        (paused) => {
+          if (paused) this.loop.pauseSim();
+          else this.loop.resumeSim();
+        },
+        () => {
+          this.ui.closePowerMenu();
+          this.audio.uiBeep(700, 0.08);
+        },
+      );
 
-    await this.scenes.loadWorld('neon');
-    const w = this.scenes.world;
-    if (w) {
-      this.scenes.scene.add(this.player.mesh);
-      this.scenes.scene.add(this.obstacles.root);
-      this.player.setGroundMesh(w.ground);
+      this.loop = new Loop(
+        (dt) => this.tick(dt),
+        () => this.renderFrame(),
+      );
+      window.addEventListener('resize', this.resize);
+      this.bindUi();
+      this.ui.setBoot(65);
+
+      await this.scenes.loadWorld('neon');
+      const w = this.scenes.world;
+      if (w) {
+        this.scenes.scene.add(this.player.mesh);
+        this.scenes.scene.add(this.obstacles.root);
+        this.player.setGroundMesh(w.ground);
+      }
+      this.player.reset();
+      this.obstacles.reset(8);
+      this.cam.snap(this.player.position);
+      this.ui.setBoot(90);
+
+      this.drawBootPreview();
+      this.ui.setBoot(100);
+      await sleep(200);
+      this.ui.hideBoot();
+      this.ui.showMenu(true);
+      this.ui.setHudVisible(false);
+      this.resize();
+      this.renderFrame();
+      this.loop.start();
+    } catch (err) {
+      console.error('[RL3D] boot failed', err);
+      const pct = document.getElementById('boot-pct');
+      if (pct) pct.textContent = 'Error — recarga la página';
+      throw err;
     }
-    this.ui.setBoot(100);
-    this.drawBootPreview();
-    await sleep(280);
-    this.ui.hideBoot();
-    this.resize();
-    window.addEventListener('resize', this.resize);
-    this.loop.start();
-    this.loop.pause();
   }
 
   private bindUi(): void {
@@ -111,6 +133,7 @@ export class Game {
         this.qualityId = q;
         this.renderer.applyQuality(QUALITY[q]);
         this.scenes.setQuality(QUALITY[q]);
+        this.resize();
       },
     );
     play?.addEventListener('click', () => this.startRun());
@@ -132,21 +155,32 @@ export class Game {
     this.player.reset();
     this.obstacles.reset(this.player.position.z + 14);
     this.portalUsed = false;
+    this.cam.snap(this.player.position);
     this.ui.showMenu(false);
     this.ui.hideResults();
-    this.loop.resume();
+    this.ui.setHudVisible(true);
+    this.loop.resumeSim();
     this.audio.uiBeep(520, 0.05);
   }
 
   private tick(dt: number): void {
     this.input.pollGamepad();
+
     if (!this.playing) {
-      this.renderer.render(this.scenes.scene, this.scenes.camera);
+      this.idleT += dt;
+      // Gentle bob so the menu backdrop feels alive
+      const bob = this.player.position.clone();
+      bob.y = 1.2 + Math.sin(this.idleT * 1.2) * 0.08;
+      this.cam.update(dt, bob);
+      this.scenes.update(dt, this.player.position.z);
+      this.obstacles.update(dt * 0.35, this.player.position.z, 0.4);
+      this.renderFrame();
       return;
     }
 
     if (this.input.consumeSuper() && this.powers.tryOpenMenu()) {
       this.ui.openPowerMenu(this.powers.list(), (id) => this.powers.select(id));
+      this.renderFrame();
       return;
     }
 
@@ -207,6 +241,10 @@ export class Game {
       superCharge: this.powers.charge,
     });
 
+    this.renderFrame();
+  }
+
+  private renderFrame(): void {
     this.renderer.render(this.scenes.scene, this.scenes.camera);
   }
 
@@ -230,8 +268,8 @@ export class Game {
 
   private endRun(cleared: boolean): void {
     this.playing = false;
-    this.loop.pause();
     this.audio.stopAmbient();
+    this.ui.setHudVisible(false);
     this.ui.showResults(cleared, [
       `Distancia ${Math.floor(this.player.distance)} m`,
       `Monedas ${this.coins} · ×${DIFF[this.diffId].reward.toFixed(2)}`,
@@ -244,9 +282,11 @@ export class Game {
   private resize = (): void => {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    this.scenes.camera.aspect = w / Math.max(1, h);
-    this.scenes.camera.updateProjectionMatrix();
-    this.renderer.resize(w, h);
+    if (this.scenes) {
+      this.scenes.camera.aspect = w / Math.max(1, h);
+      this.scenes.camera.updateProjectionMatrix();
+    }
+    if (this.renderer) this.renderer.resize(w, h);
   };
 
   private drawBootPreview(): void {

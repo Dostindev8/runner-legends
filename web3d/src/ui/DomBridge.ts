@@ -40,8 +40,24 @@ export class DomBridge {
 
   hideBoot(): void {
     this.els.boot?.classList.add('hidden');
+    this.els.boot?.setAttribute('aria-hidden', 'true');
     this.els.root?.classList.remove('hidden');
     this.els.root?.setAttribute('aria-hidden', 'false');
+  }
+
+  /** Reveal game root (for canvas sizing) while boot overlay still covers. */
+  hideBootPartial(): void {
+    this.els.root?.classList.remove('hidden');
+    this.els.root?.setAttribute('aria-hidden', 'false');
+  }
+
+  setHudVisible(show: boolean): void {
+    const hud = document.getElementById('hud');
+    const sw = document.getElementById('super-wrap');
+    const touch = document.getElementById('touch');
+    hud?.classList.toggle('hidden', !show);
+    sw?.classList.toggle('hidden', !show);
+    touch?.classList.toggle('hidden', !show);
   }
 
   setHud(s: {

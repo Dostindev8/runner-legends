@@ -14,7 +14,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; }
+html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; background: #050218; }
 .hidden { display: none !important; }
 
 #boot {
@@ -83,8 +83,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; }
 .menu, .results, .power-menu {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: min(420px, 92vw); padding: 20px; border-radius: 18px;
-  background: var(--panel); border: 1px solid rgba(34, 230, 255, 0.45);
-  backdrop-filter: blur(8px); text-align: center; z-index: 10;
+  background: rgba(6, 10, 28, 0.82); border: 1px solid rgba(34, 230, 255, 0.55);
+  backdrop-filter: blur(10px); text-align: center; z-index: 10;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55);
 }
 .menu h1 { margin: 0 0 6px; font-size: clamp(1.3rem, 5vw, 1.8rem); letter-spacing: 0.06em; }
 .menu h1 span { color: var(--cyan); }

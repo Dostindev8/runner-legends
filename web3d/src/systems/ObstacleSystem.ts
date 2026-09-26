@@ -32,11 +32,11 @@ export class ObstacleSystem {
     this.root.name = 'obstacles';
     this.poolHazard = new THREE.Mesh(
       new THREE.BoxGeometry(0.9, 0.9, 0.9),
-      new THREE.MeshToonMaterial({ color: 0xff3355, emissive: 0x661122, emissiveIntensity: 0.3 }),
+      new THREE.MeshLambertMaterial({ color: 0xff3355, emissive: 0x661122, emissiveIntensity: 0.45 }),
     );
     this.poolCoin = new THREE.Mesh(
       new THREE.CylinderGeometry(0.28, 0.28, 0.08, 16),
-      new THREE.MeshToonMaterial({ color: 0xffd24a, emissive: 0xaa8800, emissiveIntensity: 0.45 }),
+      new THREE.MeshLambertMaterial({ color: 0xffd24a, emissive: 0xaa8800, emissiveIntensity: 0.6 }),
     );
     this.poolCoin.rotation.z = Math.PI / 2;
     this.poolEnemy = buildEnemyProxy();
@@ -158,7 +158,7 @@ function buildEnemyProxy(): THREE.Group {
   const g = new THREE.Group();
   const body = new THREE.Mesh(
     new THREE.SphereGeometry(0.38, 10, 8),
-    new THREE.MeshToonMaterial({ color: 0xaa44ff }),
+    new THREE.MeshLambertMaterial({ color: 0xaa44ff, emissive: 0x5511aa, emissiveIntensity: 0.4 }),
   );
   body.position.y = 0.45;
   body.castShadow = true;

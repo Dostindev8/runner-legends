@@ -1,24 +1,23 @@
 import * as THREE from 'three';
 
 /**
- * Kori Voltz — low-poly stylized proxy (procedural "GLB-ready" silhouette).
- * Replace with public/models/kori.glb when asset pipeline ships; API stays the same.
+ * Kori Voltz — low-poly stylized silhouette (Lambert = always lit, never black void).
  */
 export function createKoriMesh(): THREE.Group {
   const root = new THREE.Group();
   root.name = 'KoriVoltz';
 
-  const skin = new THREE.MeshToonMaterial({ color: 0xffe0b0 });
-  const suit = new THREE.MeshToonMaterial({ color: 0x1a2a4a });
-  const neon = new THREE.MeshToonMaterial({
+  const skin = new THREE.MeshLambertMaterial({ color: 0xffe0b0 });
+  const suit = new THREE.MeshLambertMaterial({ color: 0x1a2a4a });
+  const neon = new THREE.MeshLambertMaterial({
     color: 0x22e6ff,
-    emissive: 0x22e6ff,
-    emissiveIntensity: 0.55,
+    emissive: 0x1188aa,
+    emissiveIntensity: 0.65,
   });
-  const mag = new THREE.MeshToonMaterial({
+  const mag = new THREE.MeshLambertMaterial({
     color: 0xff2bd6,
-    emissive: 0xff2bd6,
-    emissiveIntensity: 0.4,
+    emissive: 0xaa1166,
+    emissiveIntensity: 0.55,
   });
 
   const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 0.42, 4, 10), suit);

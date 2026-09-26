@@ -3,33 +3,33 @@ import * as THREE from 'three';
 export type TickFn = (dt: number, elapsed: number) => void;
 
 /**
- * rAF loop with pause on visibilitychange and optional fixed-step physics.
+ * rAF loop. `pause()` freezes simulation callbacks but keeps rendering
+ * so the menu always shows a live 3D backdrop (never a black canvas).
  */
 export class Loop {
   private clock = new THREE.Clock(false);
   private running = false;
-  private paused = false;
+  private simPaused = false;
   private raf = 0;
   private readonly onTick: TickFn;
-  private readonly fixedStep: number | null;
-  private accum = 0;
+  private readonly onRender: (() => void) | null;
   private elapsed = 0;
 
-  constructor(onTick: TickFn, fixedStep: number | null = null) {
+  constructor(onTick: TickFn, onRender: (() => void) | null = null) {
     this.onTick = onTick;
-    this.fixedStep = fixedStep;
+    this.onRender = onRender;
     document.addEventListener('visibilitychange', this.onVis);
   }
 
   private onVis = (): void => {
-    if (document.hidden) this.pause();
-    else if (this.running) this.resume();
+    if (document.hidden) this.pauseSim();
+    else if (this.running) this.resumeSim();
   };
 
   start(): void {
     if (this.running) return;
     this.running = true;
-    this.paused = false;
+    this.simPaused = false;
     this.clock.start();
     this.clock.getDelta();
     this.frame();
@@ -41,36 +41,37 @@ export class Loop {
     this.clock.stop();
   }
 
-  pause(): void {
-    this.paused = true;
+  /** Freeze gameplay systems; rendering continues. */
+  pauseSim(): void {
+    this.simPaused = true;
     this.clock.stop();
   }
 
-  resume(): void {
+  resumeSim(): void {
     if (!this.running) return;
-    this.paused = false;
+    this.simPaused = false;
     this.clock.start();
     this.clock.getDelta();
   }
 
+  /** @deprecated use pauseSim — kept for call sites */
+  pause(): void { this.pauseSim(); }
+  resume(): void { this.resumeSim(); }
+
   get isPaused(): boolean {
-    return this.paused;
+    return this.simPaused;
   }
 
   private frame = (): void => {
     this.raf = requestAnimationFrame(this.frame);
-    if (this.paused || !this.running) return;
-    let dt = Math.min(0.05, this.clock.getDelta());
-    if (this.fixedStep) {
-      this.accum += dt;
-      while (this.accum >= this.fixedStep) {
-        this.elapsed += this.fixedStep;
-        this.onTick(this.fixedStep, this.elapsed);
-        this.accum -= this.fixedStep;
-      }
-    } else {
+    if (!this.running) return;
+
+    if (!this.simPaused) {
+      const dt = Math.min(0.05, this.clock.getDelta());
       this.elapsed += dt;
       this.onTick(dt, this.elapsed);
+    } else if (this.onRender) {
+      this.onRender();
     }
   };
 

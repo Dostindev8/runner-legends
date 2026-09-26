@@ -2,13 +2,12 @@ import * as THREE from 'three';
 import type { QualityPreset } from '../config';
 
 /**
- * WebGL primary + WebGPU attempt with automatic fallback (r186).
- * PCFShadowMap only — PCFSoftShadowMap removed in r186.
+ * Stable WebGL2 only. WebGPU deferred — MeshToon/shadows were blacking out
+ * the canvas in some Chromium embeds when swapped mid-boot.
  */
 export class RendererHost {
   readonly canvas: HTMLCanvasElement;
-  renderer: THREE.WebGLRenderer;
-  private usingWebGPU = false;
+  readonly renderer: THREE.WebGLRenderer;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -17,64 +16,33 @@ export class RendererHost {
       antialias: true,
       powerPreference: 'high-performance',
       alpha: false,
+      preserveDrawingBuffer: false,
     });
-    this.applyColorPipeline();
-  }
-
-  private applyColorPipeline(): void {
+    this.renderer.setClearColor(0x050218, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 1.15;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
-  }
-
-  /** Attempt WebGPU; keep WebGL2 if unavailable. */
-  async tryWebGPU(): Promise<boolean> {
-    try {
-      const mod = (await import('three/webgpu')) as unknown as {
-        WebGPURenderer: new (p: { canvas: HTMLCanvasElement }) => {
-          init?: () => Promise<void>;
-          dispose: () => void;
-          outputColorSpace: unknown;
-          toneMapping: unknown;
-          toneMappingExposure: number;
-          shadowMap: { enabled: boolean; type: unknown };
-          setPixelRatio: (n: number) => void;
-          setSize: (w: number, h: number, u?: boolean) => void;
-          render: (s: THREE.Scene, c: THREE.Camera) => void;
-        };
-      };
-      const gpu = new mod.WebGPURenderer({ canvas: this.canvas });
-      if (typeof gpu.init === 'function') await gpu.init();
-      this.renderer.dispose();
-      this.renderer = gpu as unknown as THREE.WebGLRenderer;
-      this.applyColorPipeline();
-      this.usingWebGPU = true;
-      return true;
-    } catch {
-      this.usingWebGPU = false;
-      return false;
-    }
   }
 
   applyQuality(q: QualityPreset): void {
     const dpr = Math.min(window.devicePixelRatio || 1, q.dprMax);
     this.renderer.setPixelRatio(dpr);
     this.renderer.shadowMap.enabled = q.shadows;
-    this.renderer.toneMappingExposure = q.id === 'high' ? 1.1 : 1.05;
+    this.renderer.toneMappingExposure = q.id === 'high' ? 1.2 : 1.15;
   }
 
   resize(w: number, h: number): void {
-    this.renderer.setSize(w, h, false);
+    const ww = Math.max(1, Math.floor(w));
+    const hh = Math.max(1, Math.floor(h));
+    this.renderer.setSize(ww, hh, false);
+    this.canvas.style.width = '100%';
+    this.canvas.style.height = '100%';
   }
 
   render(scene: THREE.Scene, camera: THREE.Camera): void {
     this.renderer.render(scene, camera);
-  }
-
-  get isWebGPU(): boolean {
-    return this.usingWebGPU;
   }
 
   dispose(): void {
