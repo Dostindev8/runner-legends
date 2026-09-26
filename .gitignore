@@ -47,3 +47,7 @@ unity/RunnerLegends/obj/
 # Vercel
 .vercel/
 .vercel
+
+# web3d tooling
+web3d/dist/
+

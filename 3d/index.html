@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#050218" />
+    <title>Runner Legends 3D · Distrito Neón</title>
+    <meta name="description" content="Runner Legends — Logic Code Spot · Kori Voltz · Three.js r186" />
+    <script type="module" crossorigin src="/3d/assets/index-Cta2sFR0.js"></script>
+    <link rel="stylesheet" crossorigin href="/3d/assets/index-Dcph4MyU.css">
+  </head>
+  <body>
+    <div id="boot" aria-live="polite">
+      <div class="boot-card">
+        <div class="boot-logo" aria-hidden="true">RL</div>
+        <p class="boot-title">CARGANDO DISTRITO</p>
+        <div class="boot-bar"><span id="boot-fill"></span></div>
+        <p id="boot-pct">0%</p>
+      </div>
+      <canvas id="boot-preview" width="320" height="180" aria-hidden="true"></canvas>
+    </div>
+
+    <div id="game-root" class="hidden" aria-hidden="true">
+      <canvas id="rl3d-canvas"></canvas>
+
+      <header id="hud" class="hud">
+        <div class="hud-left">
+          <span id="hud-lives" aria-label="Vidas">❤❤❤</span>
+          <span id="hud-coins">◎ 0</span>
+        </div>
+        <div class="hud-center">
+          <span id="hud-dist">0 m</span>
+          <span id="hud-world">Distrito Neón</span>
+        </div>
+        <div class="hud-right">
+          <span id="hud-diff" class="chip">NORMAL</span>
+          <span id="hud-ko">KO 0/8</span>
+        </div>
+      </header>
+
+      <div id="super-wrap" class="super-wrap">
+        <div class="super-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="super-bar-aria">
+          <div id="super-fill"></div>
+        </div>
+        <button type="button" id="super-btn" class="super-btn" disabled aria-label="Activar SÚPER">SÚPER</button>
+      </div>
+
+      <div id="touch" class="touch" aria-label="Controles táctiles">
+        <button type="button" id="btn-left" class="touch-btn" aria-label="Izquierda">←</button>
+        <button type="button" id="btn-jump" class="touch-btn touch-jump" aria-label="Saltar">▲</button>
+        <button type="button" id="btn-right" class="touch-btn" aria-label="Derecha">→</button>
+      </div>
+
+      <div id="power-menu" class="power-menu hidden" role="dialog" aria-modal="true" aria-label="Menú de poderes">
+        <h2>Explosión Estelar</h2>
+        <p class="power-hint">Elige un poder · el tiempo está en pausa</p>
+        <div id="power-list" class="power-list"></div>
+        <button type="button" id="power-close" class="power-close">Continuar sin poder</button>
+      </div>
+
+      <div id="results" class="results hidden" role="dialog" aria-modal="true">
+        <h2 id="results-title">CARRERA TERMINADA</h2>
+        <p id="results-status"></p>
+        <ul id="results-stats"></ul>
+        <button type="button" id="results-retry" class="cta">▶ OTRA VEZ</button>
+        <a class="back-2d" href="/">Volver al modo clásico 2D</a>
+      </div>
+
+      <nav id="menu" class="menu">
+        <h1>RUNNER LEGENDS <span>3D</span></h1>
+        <p class="credit">Logic Code Spot · Diseño: Dostin Santana · IP original · Kori Voltz</p>
+        <div class="diff-row" role="group" aria-label="Dificultad">
+          <button type="button" data-diff="normal" class="diff on">Normal</button>
+          <button type="button" data-diff="hard" class="diff">Difícil</button>
+          <button type="button" data-diff="expert" class="diff">Experto</button>
+          <button type="button" data-diff="legendary" class="diff" disabled title="Próximamente">Legendario</button>
+        </div>
+        <div class="quality-row" role="group" aria-label="Calidad">
+          <button type="button" data-q="low" class="q">Low</button>
+          <button type="button" data-q="mid" class="q on">Mid</button>
+          <button type="button" data-q="high" class="q">High</button>
+        </div>
+        <button type="button" id="play-btn" class="cta">▶ JUGAR</button>
+        <p class="hint">Espacio/▲ saltar · Doble salto · Coyote por dificultad · 8 KO / 250 m</p>
+      </nav>
+    </div>
+
+  </body>
+</html>
